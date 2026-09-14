@@ -1,0 +1,89 @@
+---
+description: State management rules for Flutter applications
+globs:
+  - "lib/features/**/presentation/**/*.dart"
+  - "lib/app/**/*.dart"
+alwaysApply: false
+---
+
+# Flutter State Management Rules
+
+## 1. Single State Management Strategy
+
+Use the project's chosen state management solution consistently.
+
+Do not introduce another state management framework for a feature without an explicit architectural decision.
+
+## 2. UI State
+
+UI state should explicitly represent meaningful states.
+
+At minimum consider:
+
+- initial
+- loading
+- success
+- empty
+- error
+
+For operations that require it, also represent:
+
+- submitting
+- retrying
+- offline
+- synchronized
+- pending synchronization
+
+## 3. No Business Logic in State Widgets
+
+Widgets should consume state and dispatch actions.
+
+They should not implement application workflows.
+
+## 4. Async Operations
+
+Async operations must expose their lifecycle clearly.
+
+Avoid boolean combinations such as:
+
+isLoading
+hasError
+isSaving
+hasData
+isRetrying
+
+when a typed state model would be clearer.
+
+## 5. State Ownership
+
+State should live at the narrowest scope that satisfies the requirement.
+
+Do not create global state for local UI concerns.
+
+## 6. Shared State
+
+Use shared/application state only when multiple parts of the application genuinely require the same state.
+
+## 7. Derived State
+
+Prefer deriving state from authoritative state instead of duplicating values.
+
+Avoid multiple mutable sources of truth.
+
+## 8. Disposal
+
+Subscriptions, controllers, streams, and other resources must be disposed according to their lifecycle.
+
+## 9. Error Recovery
+
+Errors must provide a recoverable path when appropriate.
+
+Examples:
+
+- retry
+- re-authenticate
+- refresh
+- continue offline
+- return to previous state
+
+Do not leave the application permanently blocked because a request failed.

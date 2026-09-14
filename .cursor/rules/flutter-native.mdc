@@ -1,0 +1,103 @@
+---
+description: Rules for camera, barcode, GPS and other native device capabilities
+globs:
+  - "lib/core/**/*.dart"
+  - "lib/features/**/*.dart"
+alwaysApply: false
+---
+
+# Native Capability Rules
+
+## 1. Abstraction Boundary
+
+Native device capabilities must be isolated behind application-facing abstractions when they are part of business workflows.
+
+Examples:
+
+- BarcodeScanner
+- LocationService
+- SecureStorage
+- ConnectivityService
+- NotificationService
+
+## 2. Camera and Barcode
+
+Barcode scanning must not be coupled directly to business workflows.
+
+Preferred:
+
+UI
+→ Scanner abstraction
+→ scanned value
+→ application use case
+
+## 3. Location
+
+Location acquisition must be isolated from the replenishment workflow.
+
+Preferred:
+
+LocationService
+→ Location
+→ CreateReplenishment use case
+
+Do not call platform location APIs directly from repositories.
+
+## 4. Permissions
+
+Permission handling must be explicit.
+
+The application must distinguish:
+
+- permission granted
+- permission denied
+- permission permanently denied
+- location unavailable
+
+## 5. Device Failures
+
+Native capabilities can fail.
+
+Handle:
+
+- unavailable hardware
+- denied permission
+- timeout
+- cancellation
+- temporary failure
+
+Do not assume the device always provides the requested capability.
+
+## 6. Platform-Specific Code
+
+Platform-specific implementation belongs behind a clear boundary.
+
+Do not spread platform checks throughout the application.
+
+Avoid unnecessary `Platform.isAndroid` / `Platform.isIOS` checks in feature code.
+
+## 7. Testing
+
+Native integrations must provide testable abstractions.
+
+Tests should be able to use:
+
+- FakeBarcodeScanner
+- FakeLocationService
+- FakeConnectivityService
+
+without requiring physical hardware.
+
+## 8. Device Verification
+
+Features involving:
+
+- camera
+- barcode
+- GPS
+- notifications
+- secure storage
+
+must be verified on a real device when technically relevant.
+
+An emulator-only test is not sufficient for hardware-dependent behavior.

@@ -1,0 +1,80 @@
+---
+description: Documentation rules for Flutter development
+globs:
+  - "docs/**/*.md"
+  - "README.md"
+  - "lib/**/*.dart"
+alwaysApply: false
+---
+
+# Flutter Documentation Rules
+
+## 1. Documentation as Part of the Change
+
+Documentation is part of a feature when the change affects:
+
+- architecture
+- API integration
+- configuration
+- development workflow
+- testing
+- native permissions
+- offline behavior
+- security
+- public contracts
+
+## 2. Architecture Documentation
+
+Keep the high-level architecture documented.
+
+At minimum explain:
+
+- Flutter client role
+- feature structure
+- API boundary
+- state management
+- native capability boundaries
+- testing strategy
+
+## 3. API Documentation
+
+Do not duplicate the entire backend API documentation unnecessarily.
+
+Reference the authoritative NexoVending API contract.
+
+Document only mobile-specific integration details.
+
+## 4. Setup
+
+The repository must document:
+
+- Flutter version
+- Dart version
+- required environment configuration
+- local development
+- test execution
+- integration testing
+- device requirements
+
+## 5. ADRs
+
+Use ADRs for decisions that affect the long-term architecture.
+
+Examples:
+
+- state management
+- offline architecture
+- persistence strategy
+- authentication strategy
+- navigation architecture
+- dependency choices
+
+## 6. Accuracy
+
+Documentation must reflect the implementation.
+
+Do not document planned behavior as implemented behavior.
+
+## 7. Scope
+
+Do not rewrite unrelated documentation during feature work.

@@ -1,0 +1,99 @@
+---
+description: Flutter UI and presentation rules
+globs:
+  - "lib/features/**/presentation/**/*.dart"
+  - "lib/shared/**/*.dart"
+alwaysApply: false
+---
+
+# Flutter UI Rules
+
+## 1. Presentation Responsibility
+
+Presentation code is responsible for:
+
+- rendering
+- navigation
+- user interaction
+- visual validation
+- displaying application state
+
+It must not own backend business rules.
+
+## 2. Widget Size
+
+Avoid very large widgets.
+
+When a widget becomes difficult to understand or test, extract focused components.
+
+Prefer:
+
+Page
+→ Section
+→ Component
+→ Primitive
+
+over monolithic widgets.
+
+## 3. Reusability
+
+Extract shared UI components only when reuse or semantic clarity justifies it.
+
+Do not create abstractions prematurely.
+
+## 4. Theme
+
+Use the centralized application theme.
+
+Do not hardcode colors, typography, or spacing repeatedly.
+
+## 5. Responsive Layout
+
+Layouts must account for supported device sizes.
+
+Do not assume one screen resolution.
+
+## 6. Accessibility
+
+Interactive controls must have meaningful:
+
+- labels
+- semantic descriptions where needed
+- adequate touch targets
+- readable text
+
+## 7. Loading
+
+Every asynchronous screen must define its loading behavior.
+
+Avoid blank screens during requests.
+
+## 8. Empty States
+
+Empty collections must have an intentional UI state.
+
+Do not treat empty data as an error.
+
+## 9. Errors
+
+Errors must be understandable to the user.
+
+Do not display raw exceptions, stack traces, or backend implementation details.
+
+## 10. Navigation
+
+Navigation must use the centralized routing strategy.
+
+Do not introduce ad-hoc navigation architectures inside features.
+
+## 11. BuildContext
+
+Do not retain `BuildContext` beyond its safe lifecycle.
+
+Avoid passing BuildContext deep into domain/application code.
+
+## 12. Internationalization
+
+User-facing text must not be scattered as unexplained literals when the application supports localization.
+
+Keep localization strategy centralized.

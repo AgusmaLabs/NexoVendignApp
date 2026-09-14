@@ -1,0 +1,77 @@
+---
+description: Security rules for Flutter applications
+globs:
+  - "lib/**/*.dart"
+  - "test/**/*.dart"
+alwaysApply: true
+---
+
+# Flutter Security Rules
+
+## 1. Secrets
+
+Never commit:
+
+- API keys
+- passwords
+- private keys
+- tokens
+- production credentials
+- client secrets
+
+## 2. Configuration
+
+Environment-specific configuration must not be hardcoded into application logic.
+
+## 3. Authentication Tokens
+
+Persist sensitive authentication material using secure platform storage.
+
+Do not store authentication tokens in plain text storage unless explicitly justified by the security architecture.
+
+## 4. Authorization
+
+Flutter must never be treated as the authority for authorization.
+
+UI restrictions are not security controls.
+
+The backend must authorize every protected operation.
+
+## 5. Tenant Isolation
+
+The client must never allow the user to arbitrarily select or manipulate tenant identifiers unless explicitly authorized by the backend contract.
+
+Never trust tenant identifiers received from UI input.
+
+## 6. Logging
+
+Never log:
+
+- passwords
+- authentication tokens
+- secrets
+- sensitive personal information
+
+Production logging must be intentionally controlled.
+
+## 7. Error Messages
+
+Do not expose:
+
+- stack traces
+- database errors
+- internal service details
+- credentials
+- infrastructure details
+
+to end users.
+
+## 8. Web Views
+
+Do not embed authentication or sensitive workflows into arbitrary web views without explicit security justification.
+
+## 9. Dependencies
+
+Security-sensitive packages must be kept updated.
+
+Do not introduce packages with unclear maintenance or security posture.

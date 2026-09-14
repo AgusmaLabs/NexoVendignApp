@@ -1,0 +1,130 @@
+---
+description: Rules for consuming the NexoVending API
+globs:
+  - "lib/core/networking/**/*.dart"
+  - "lib/features/**/data/**/*.dart"
+  - "lib/features/**/domain/**/*.dart"
+alwaysApply: false
+---
+
+# NexoVending API Rules
+
+## 1. API Authority
+
+The NexoVending API is the authoritative contract.
+
+Before implementing an API integration:
+
+1. inspect the existing API contract (\docs\nexovending_API)
+2. verify endpoint
+3. verify HTTP method
+4. verify request schema
+5. verify response schema
+6. verify authentication requirements
+7. verify error semantics
+
+Do not guess API behavior.
+
+## 2. API Client
+
+All HTTP communication must pass through the centralized networking layer.
+
+Do not instantiate HTTP clients inside widgets, pages, or use cases.
+
+Preferred:
+
+Use Case
+→ Repository
+→ API client
+→ HTTP
+
+## 3. Authentication
+
+Authentication must be centralized.
+
+Do not manually attach tokens in individual feature implementations.
+
+The networking layer should handle authentication consistently.
+
+## 4. Environment Configuration
+
+Never hardcode production API URLs.
+
+Use environment/application configuration.
+
+At minimum distinguish:
+
+- development
+- staging
+- production
+
+## 5. Request Models
+
+Use typed request models for non-trivial API requests.
+
+Avoid dynamic maps when a typed model provides meaningful safety.
+
+## 6. Response Models
+
+Use typed response DTOs.
+
+Avoid passing `Map<String, dynamic>` beyond the API/data boundary.
+
+## 7. HTTP Status Codes
+
+HTTP status codes must be interpreted in the data/network layer.
+
+Do not write logic such as:
+
+if (statusCode == 409)
+
+inside widgets.
+
+Map transport errors into application-level errors.
+
+## 8. Idempotency
+
+When an API endpoint supports idempotency, the mobile client must use the API contract exactly.
+
+Do not implement a second idempotency mechanism that conflicts with the backend.
+
+Idempotency keys must remain stable for the lifetime of the logical operation being retried.
+
+## 9. Pagination
+
+Follow the API pagination contract.
+
+Do not infer pagination behavior from UI requirements.
+
+## 10. API Versioning
+
+Never silently change API versions.
+
+If the application migrates from `/v1` to `/v2`, treat it as an explicit integration change.
+
+## 11. Contract Changes
+
+If an API response changes unexpectedly:
+
+Do not silently make the client permissive merely to make tests pass.
+
+First determine whether:
+
+- the API changed
+- the client is outdated
+- the contract was misunderstood
+
+Then update the appropriate side.
+
+## 12. Integration Tests
+
+Critical API workflows must have integration coverage.
+
+Especially:
+
+- authentication
+- machine retrieval
+- product lookup
+- replenishment creation
+- error handling
+- idempotent retry behavior

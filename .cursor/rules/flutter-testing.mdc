@@ -1,0 +1,114 @@
+---
+description: Testing rules for Flutter applications
+globs:
+  - "test/**/*.dart"
+  - "integration_test/**/*.dart"
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Flutter Testing Rules
+
+## 1. Testing Philosophy
+
+Tests must verify behavior and contracts.
+
+Do not write tests merely to increase coverage.
+
+## 2. Test Pyramid
+
+Maintain multiple testing levels:
+
+- unit tests
+- widget tests
+- integration tests
+- API integration tests
+- device verification where required
+
+## 3. Unit Tests
+
+Unit tests should cover:
+
+- domain models
+- mappers
+- validators
+- use cases
+- repository behavior
+- state transitions
+- error mapping
+
+## 4. Widget Tests
+
+Widget tests should verify:
+
+- rendering
+- user interaction
+- loading state
+- success state
+- empty state
+- error state
+
+## 5. Integration Tests
+
+Critical user workflows must be tested end-to-end where practical.
+
+NexoVending examples:
+
+Login
+→ select machine
+→ scan product
+→ enter quantity
+→ capture location
+→ submit replenishment
+
+## 6. API Tests
+
+Critical API integrations should be tested against a real integration environment where practical.
+
+Do not mock the entire backend for all tests.
+
+## 7. Native Tests
+
+Hardware-dependent functionality should have:
+
+- abstraction-level tests
+- device/emulator integration tests where possible
+- real-device verification when required
+
+## 8. Test Doubles
+
+Use fakes, stubs, and mocks at explicit boundaries.
+
+Do not mock internal implementation details unnecessarily.
+
+## 9. Regression Tests
+
+Every discovered production-level bug should result in a regression test when practical.
+
+## 10. Test Isolation
+
+Tests must not depend on execution order.
+
+Tests must clean up their resources.
+
+## 11. Network Tests
+
+Unit tests must not depend on the internet.
+
+Integration tests may depend on a controlled integration environment.
+
+## 12. Definition of Done
+
+A feature is not complete when only the happy path passes.
+
+At minimum consider:
+
+- happy path
+- validation failure
+- API failure
+- timeout
+- unauthorized response
+- empty state
+- retry behavior
+
+where applicable.

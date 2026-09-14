@@ -1,0 +1,78 @@
+---
+description: Dependency management rules for Flutter
+globs:
+  - "pubspec.yaml"
+  - "pubspec.lock"
+  - "lib/**/*.dart"
+alwaysApply: true
+---
+
+# Flutter Dependency Rules
+
+## 1. Minimize Dependencies
+
+Do not add a dependency when the functionality can reasonably be implemented with:
+
+- Dart
+- Flutter SDK
+- an existing project dependency
+
+## 2. Justification
+
+Every significant new dependency should have a clear reason.
+
+Consider:
+
+- maintenance
+- community adoption
+- security
+- license
+- compatibility
+- platform support
+- alternatives
+
+## 3. No Duplicate Libraries
+
+Do not introduce multiple libraries solving the same concern.
+
+Examples:
+
+- multiple HTTP clients
+- multiple state management frameworks
+- multiple routing frameworks
+- multiple persistence frameworks
+
+without an explicit ADR.
+
+## 4. Version Changes
+
+Do not perform broad dependency upgrades as part of an unrelated feature.
+
+Separate dependency upgrades into focused changes.
+
+## 5. Lockfile
+
+Do not manually edit `pubspec.lock`.
+
+Use Dart/Flutter package tooling.
+
+## 6. Generated Code
+
+Do not manually modify generated files.
+
+Modify the source configuration and regenerate.
+
+## 7. Abandoned Packages
+
+Avoid packages that are clearly abandoned or incompatible with the project's supported Flutter/Dart versions.
+
+## 8. Native Plugins
+
+Before adding a native plugin, verify:
+
+- Android support
+- iOS support
+- maintenance status
+- permissions required
+- testing implications
+- licensing

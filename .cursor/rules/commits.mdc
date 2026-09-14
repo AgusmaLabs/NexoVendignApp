@@ -1,0 +1,111 @@
+---
+description: Commit and Definition of Done rules for Flutter development
+globs:
+  - "**/*"
+alwaysApply: true
+---
+
+# Commit Rules
+
+## 1. Small Coherent Commits
+
+Each commit must represent one coherent architectural or functional change.
+
+Avoid large mixed commits.
+
+## 2. Commit Naming
+
+Use Conventional Commits.
+
+Preferred format:
+
+type(scope): description
+
+Examples:
+
+feat(flutter): establish mobile application foundation
+feat(auth): implement authentication flow
+feat(machines): add machine selection
+feat(products): add barcode product lookup
+feat(replenishments): implement replenishment flow
+test(replenishments): add integration coverage
+fix(api): handle expired authentication token
+refactor(core): isolate native capability adapters
+docs(architecture): document mobile architecture
+
+## 3. Implementation Scope
+
+A commit should contain only files required for its stated purpose.
+
+Do not mix:
+
+- unrelated refactoring
+- formatting-only changes
+- dependency upgrades
+- feature implementation
+- architectural migrations
+
+unless they are required by the same change.
+
+## 4. Tests
+
+Every functional commit must include appropriate tests.
+
+The level of testing must match the risk of the change.
+
+## 5. Documentation
+
+Update relevant documentation in the same commit when the change modifies documented behavior or architecture.
+
+## 6. Validation
+
+Before considering a commit complete:
+
+1. run formatter
+2. run static analysis
+3. run relevant unit tests
+4. run relevant widget tests
+5. run relevant integration tests
+6. verify generated code if applicable
+7. verify documentation
+8. inspect the final diff
+
+## 7. Definition of Done
+
+A change is DONE only when:
+
+1. The implementation follows the repository architecture.
+2. The public NexoVending API contract is respected.
+3. No backend business logic has been duplicated unnecessarily.
+4. Presentation, domain/application, data, and external concerns remain separated.
+5. Relevant tests exist and pass.
+6. Existing tests continue to pass.
+7. Static analysis passes without new errors.
+8. Formatting passes.
+9. No unnecessary dependencies were introduced.
+10. Security requirements are respected.
+11. Documentation is updated when required.
+12. Device verification is performed when hardware capabilities are involved.
+13. No unrelated files were modified.
+14. The final diff contains only the intended change.
+15. The commit represents one coherent change.
+
+## 8. Do Not Declare Success Without Evidence
+
+Do not claim a feature is complete based only on code inspection.
+
+When possible, report:
+
+- tests executed
+- test result
+- static analysis result
+- formatting result
+- integration/device verification result
+
+## 9. Refactoring
+
+Do not perform broad refactoring merely because existing code could be improved.
+
+If refactoring is necessary for the requested feature, keep it minimal and explain why.
+
+Otherwise create a separate refactoring change.

@@ -1,0 +1,198 @@
+---
+description: Architectural rules for Nexo Flutter mobile applications
+globs:
+  - "lib/**/*.dart"
+  - "test/**/*.dart"
+  - "integration_test/**/*.dart"
+alwaysApply: true
+---
+
+# Flutter Architecture Rules
+
+## 1. Purpose
+
+This repository contains the Flutter mobile client for NexoVending.
+
+Flutter is a client application.
+
+The backend remains the source of truth for business rules, authorization, persistence, transactions, and domain invariants.
+
+The Flutter application must consume the public NexoVending API and must not reimplement backend business logic.
+
+## 2. Architectural Boundary
+
+The dependency direction must remain:
+
+Presentation
+→ Application / Domain
+→ Data
+→ External services
+
+The following dependency direction is forbidden:
+
+Presentation
+→ HTTP client
+
+Presentation
+→ database
+
+Presentation
+→ native platform APIs directly
+
+Domain
+→ Flutter widgets
+
+Domain
+→ HTTP client
+
+Domain
+→ database
+
+Domain
+→ concrete external services
+
+## 3. Feature-Based Organization
+
+Organize functionality primarily by feature.
+
+Preferred structure:
+
+lib/
+  app/
+  core/
+  features/
+    authentication/
+    machines/
+    products/
+    replenishments/
+  shared/
+
+Each feature should contain only the layers it actually needs.
+
+Preferred feature structure:
+
+feature/
+  data/
+  domain/
+  presentation/
+
+Do not create empty architectural layers merely to satisfy a template.
+
+## 4. Core vs Feature
+
+`core/` contains cross-cutting infrastructure.
+
+Examples:
+
+- configuration
+- networking
+- authentication infrastructure
+- secure storage
+- logging
+- error handling
+- dependency injection
+- common infrastructure abstractions
+
+`features/` contains product functionality.
+
+Do not put Vending business functionality into `core/`.
+
+## 5. Shared Code
+
+`shared/` must contain genuinely reusable presentation components or utilities.
+
+Do not use `shared/` as a dumping ground.
+
+A component belongs in `shared/` only when it is reused or clearly represents a cross-feature UI primitive.
+
+## 6. No Business Logic in Widgets
+
+Widgets must not contain business workflows.
+
+Forbidden:
+
+- HTTP requests
+- database operations
+- authorization decisions
+- replenishment business rules
+- synchronization logic
+- complex domain calculations
+
+Widgets should primarily:
+
+- render state
+- capture user interaction
+- delegate actions
+- display errors
+- display loading states
+
+## 7. No Backend Duplication
+
+Do not duplicate NexoVending backend rules in Flutter.
+
+Examples of backend responsibilities:
+
+- whether a replenishment is allowed
+- whether a user can operate a machine
+- tenant authorization
+- product validity
+- inventory rules
+- transactional consistency
+- idempotency enforcement
+- persistence
+- domain invariants
+
+Flutter may perform lightweight validation for UX, but backend validation remains authoritative.
+
+## 8. API as the System Contract
+
+The existing NexoVending API is the contract between mobile and backend.
+
+Do not invent endpoints, fields, status codes, or payload structures.
+
+When an API contract changes:
+
+1. update the API contract documentation if required
+2. update DTOs
+3. update mappers
+4. update repositories/use cases
+5. update tests
+6. verify integration behavior
+
+Do not hide API incompatibilities with frontend workarounds.
+
+## 9. Scope Discipline
+
+Only modify files required for the requested change.
+
+Do not perform unrelated refactoring.
+
+Do not introduce architectural changes while implementing a feature unless explicitly requested or required for correctness.
+
+If a requested change conflicts with the architecture, explain the conflict before making broad changes.
+
+## 10. Ambiguity
+
+If requirements are ambiguous and different interpretations would produce materially different architecture or behavior, ask before implementing.
+
+Do not guess silently.
+
+## 11. Source of Truth
+
+The backend is authoritative for:
+
+- business rules
+- permissions
+- state transitions
+- persistence
+- transactions
+- idempotency
+- tenant isolation
+
+Flutter is authoritative only for:
+
+- presentation
+- local UI state
+- device interaction
+- temporary client state
+- client-side UX validation

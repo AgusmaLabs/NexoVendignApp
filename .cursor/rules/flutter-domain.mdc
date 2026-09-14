@@ -1,0 +1,152 @@
+---
+description: Domain and application layer rules for Flutter
+globs:
+  - "lib/features/**/domain/**/*.dart"
+  - "lib/features/**/data/**/*.dart"
+alwaysApply: false
+---
+
+# Flutter Domain Rules
+
+## 1. Domain Independence
+
+Domain code must not depend on:
+
+- Flutter widgets
+- BuildContext
+- HTTP clients
+- Dio
+- SQLite implementations
+- SharedPreferences
+- secure storage implementations
+- concrete platform plugins
+
+The domain must remain independently testable.
+
+## 2. DTO vs Domain Model
+
+API DTOs and domain models must remain separate when their responsibilities differ.
+
+Preferred flow:
+
+API JSON
+→ DTO
+→ Mapper
+→ Domain model
+→ Application
+→ Presentation
+
+Do not expose raw API response maps to presentation code.
+
+## 3. Repositories
+
+Repositories are abstractions from the application/domain perspective.
+
+Example:
+
+abstract class MachineRepository {
+  Future<List<Machine>> getMachines();
+}
+
+The implementation belongs to `data/`.
+
+Example:
+
+MachineRepository
+→ MachineRepositoryImpl
+→ NexoVendingApi
+→ HTTP
+
+## 4. Use Cases
+
+Use cases represent meaningful application actions.
+
+Examples:
+
+- AuthenticateUser
+- GetMachines
+- FindProduct
+- CreateReplenishment
+- GetReplenishmentHistory
+
+Do not create use cases merely as wrappers around trivial getters unless they provide meaningful application semantics.
+
+## 5. Business Rules
+
+Do not move backend business rules into Flutter use cases.
+
+A use case should orchestrate client-side operations and invoke the backend.
+
+Example:
+
+CreateReplenishment
+
+may:
+
+1. validate required client input
+2. obtain device location
+3. construct the request
+4. generate an idempotency key when required
+5. invoke the repository
+6. expose the result
+
+It must not independently decide whether the replenishment is legally or commercially valid.
+
+## 6. Domain Models
+
+Domain models should represent concepts required by the client.
+
+Do not reproduce the complete backend domain model unless the client genuinely needs it.
+
+Keep mobile domain models focused.
+
+## 7. Mappers
+
+Mappers must be explicit.
+
+Do not scatter JSON field conversion across widgets or use cases.
+
+Preferred:
+
+DTO
+→ Mapper
+→ Domain
+
+When an API field changes, the mapper layer should make the impact explicit.
+
+## 8. Error Mapping
+
+External/API errors must be mapped into application-level errors.
+
+Presentation code should not depend directly on HTTP status codes.
+
+Preferred:
+
+HTTP error
+→ API exception
+→ Repository/application error
+→ UI state
+
+## 9. Nullability
+
+Do not use `!` to suppress null-safety unless the invariant is explicitly established.
+
+Prefer explicit handling.
+
+Nullability must reflect the actual API contract.
+
+## 10. Immutability
+
+Prefer immutable models and state objects.
+
+Avoid mutable shared domain state.
+
+Use `final` by default.
+
+## 11. Testing
+
+Domain and application code must be testable without Flutter rendering, network access, or physical devices.
+
+Use fakes or mocks only at explicit boundaries.
+
+Prefer testing behavior rather than implementation details.
