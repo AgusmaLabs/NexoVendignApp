@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/config/app_config.dart';
+import 'bootstrap/app_dependencies.dart';
 import 'router/app_router.dart';
 import 'theme/app_theme.dart';
 
@@ -8,19 +9,24 @@ import 'theme/app_theme.dart';
 ///
 /// Business workflows must not live here.
 class VendingApp extends StatelessWidget {
-  const VendingApp({required this.config, super.key});
+  const VendingApp({required this.dependencies, super.key});
 
-  final AppConfig config;
+  final AppDependencies dependencies;
+
+  AppConfig get config => dependencies.config;
 
   @override
   Widget build(BuildContext context) {
-    return AppConfigScope(
-      config: config,
-      child: MaterialApp(
-        title: 'VendingApp',
-        theme: AppTheme.light(),
-        initialRoute: AppRouter.homePath,
-        onGenerateRoute: AppRouter.onGenerateRoute,
+    return AppDependenciesScope(
+      dependencies: dependencies,
+      child: AppConfigScope(
+        config: dependencies.config,
+        child: MaterialApp(
+          title: 'VendingApp',
+          theme: AppTheme.light(),
+          initialRoute: AppRouter.homePath,
+          onGenerateRoute: AppRouter.onGenerateRoute,
+        ),
       ),
     );
   }

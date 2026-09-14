@@ -1,23 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vendingapp/app/app.dart';
+import 'package:vendingapp/app/bootstrap/app_dependencies.dart';
 import 'package:vendingapp/app/home/initial_page.dart';
 import 'package:vendingapp/app/theme/app_theme.dart';
 import 'package:vendingapp/core/config/app_config.dart';
 
-void main() {
-  AppConfig buildConfig({
-    AppEnvironment environment = AppEnvironment.development,
-    String apiBaseUrl = 'http://localhost:8080',
-  }) {
-    return AppConfig(environment: environment, apiBaseUrl: apiBaseUrl);
-  }
+import '../support/test_doubles.dart';
 
+void main() {
   group('VendingApp', () {
     testWidgets('can be constructed and starts on the initial route', (
       tester,
     ) async {
-      await tester.pumpWidget(VendingApp(config: buildConfig()));
+      await tester.pumpWidget(VendingApp(dependencies: testDependencies()));
       await tester.pumpAndSettle();
 
       expect(find.byType(VendingApp), findsOneWidget);
@@ -26,7 +22,7 @@ void main() {
     });
 
     testWidgets('uses AppTheme ColorScheme', (tester) async {
-      await tester.pumpWidget(VendingApp(config: buildConfig()));
+      await tester.pumpWidget(VendingApp(dependencies: testDependencies()));
       await tester.pumpAndSettle();
 
       final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
@@ -42,21 +38,28 @@ void main() {
     testWidgets('injects AppConfig without hardcoding values in the UI', (
       tester,
     ) async {
-      final config = buildConfig(
-        environment: AppEnvironment.staging,
-        apiBaseUrl: 'https://staging.example.com',
+      final dependencies = testDependencies(
+        config: AppConfig(
+          environment: AppEnvironment.staging,
+          apiBaseUrl: 'https://staging.example.com',
+        ),
       );
 
-      await tester.pumpWidget(VendingApp(config: config));
+      await tester.pumpWidget(VendingApp(dependencies: dependencies));
       await tester.pumpAndSettle();
 
       expect(find.text('Environment: staging'), findsOneWidget);
 
-      final scoped = AppConfigScope.of(
+      final scopedConfig = AppConfigScope.of(
         tester.element(find.byType(InitialPage)),
       );
-      expect(scoped.apiBaseUrl, 'https://staging.example.com');
-      expect(scoped.environment, AppEnvironment.staging);
+      expect(scopedConfig.apiBaseUrl, 'https://staging.example.com');
+      expect(scopedConfig.environment, AppEnvironment.staging);
+
+      final scopedDeps = AppDependenciesScope.of(
+        tester.element(find.byType(InitialPage)),
+      );
+      expect(scopedDeps.config.apiBaseUrl, 'https://staging.example.com');
     });
   });
 }

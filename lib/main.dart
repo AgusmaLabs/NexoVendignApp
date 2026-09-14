@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import 'app/app.dart';
+import 'app/bootstrap/app_dependencies.dart';
 import 'core/config/app_config.dart';
 
 void main() {
@@ -14,9 +15,13 @@ void main() {
       'API_BASE_URL',
       defaultValue: 'http://localhost:8080',
     ),
+    httpTimeout: const Duration(
+      milliseconds: int.fromEnvironment('HTTP_TIMEOUT_MS', defaultValue: 30000),
+    ),
   );
 
-  runApp(VendingApp(config: config));
+  final dependencies = AppDependencies.create(config);
+  runApp(VendingApp(dependencies: dependencies));
 }
 
 AppEnvironment _environmentFromString(String value) {

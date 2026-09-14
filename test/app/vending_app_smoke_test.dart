@@ -1,17 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vendingapp/app/app.dart';
 import 'package:vendingapp/app/home/initial_page.dart';
-import 'package:vendingapp/core/config/app_config.dart';
+
+import '../support/test_doubles.dart';
 
 /// Smoke test: application shell boots and renders without exceptions.
 void main() {
   testWidgets('VendingApp smoke: boot → initial render', (tester) async {
-    final config = AppConfig(
-      environment: AppEnvironment.development,
-      apiBaseUrl: 'http://localhost:8080',
-    );
-
-    await tester.pumpWidget(VendingApp(config: config));
+    await tester.pumpWidget(VendingApp(dependencies: testDependencies()));
     await tester.pumpAndSettle();
 
     expect(tester.takeException(), isNull);

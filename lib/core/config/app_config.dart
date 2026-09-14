@@ -7,14 +7,26 @@ enum AppEnvironment { development, staging, production }
 ///
 /// Values must not be hardcoded inside widgets or feature modules.
 final class AppConfig {
-  AppConfig({required this.environment, required this.apiBaseUrl}) {
+  AppConfig({
+    required this.environment,
+    required this.apiBaseUrl,
+    this.httpTimeout = const Duration(seconds: 30),
+  }) {
     if (apiBaseUrl.trim().isEmpty) {
       throw ArgumentError.value(apiBaseUrl, 'apiBaseUrl', 'must not be empty');
+    }
+    if (httpTimeout <= Duration.zero) {
+      throw ArgumentError.value(
+        httpTimeout,
+        'httpTimeout',
+        'must be greater than zero',
+      );
     }
   }
 
   final AppEnvironment environment;
   final String apiBaseUrl;
+  final Duration httpTimeout;
 }
 
 /// Exposes [AppConfig] to the widget tree without hardcoding values in UI.
@@ -32,6 +44,7 @@ final class AppConfigScope extends InheritedWidget {
   @override
   bool updateShouldNotify(AppConfigScope oldWidget) {
     return config.environment != oldWidget.config.environment ||
-        config.apiBaseUrl != oldWidget.config.apiBaseUrl;
+        config.apiBaseUrl != oldWidget.config.apiBaseUrl ||
+        config.httpTimeout != oldWidget.config.httpTimeout;
   }
 }
