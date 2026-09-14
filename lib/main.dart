@@ -1,16 +1,28 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
+
+import 'app/app.dart';
+import 'core/config/app_config.dart';
 
 void main() {
-  runApp(const MainApp());
+  WidgetsFlutterBinding.ensureInitialized();
+
+  final config = AppConfig(
+    environment: _environmentFromString(
+      const String.fromEnvironment('APP_ENV', defaultValue: 'development'),
+    ),
+    apiBaseUrl: const String.fromEnvironment(
+      'API_BASE_URL',
+      defaultValue: 'http://localhost:8080',
+    ),
+  );
+
+  runApp(VendingApp(config: config));
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(body: Center(child: Text('Hello World!'))),
-    );
-  }
+AppEnvironment _environmentFromString(String value) {
+  return switch (value.toLowerCase()) {
+    'staging' => AppEnvironment.staging,
+    'production' => AppEnvironment.production,
+    _ => AppEnvironment.development,
+  };
 }
