@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Debug-only cleartext policy (this file lives under src/debug/).
+  Release builds do not merge this config; HTTPS remains required.
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

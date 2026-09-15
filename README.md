@@ -59,17 +59,18 @@ flutter test
 flutter run
 ```
 
-Optional compile-time configuration:
+Against a local NexoVending API on Android emulator:
 
 ```bash
 flutter run \
   --dart-define=APP_ENV=development \
-  --dart-define=API_BASE_URL=http://localhost:8080 \
+  --dart-define=API_BASE_URL=http://10.0.2.2:8000 \
   --dart-define=HTTP_TIMEOUT_MS=30000 \
   --dart-define=TENANT_ID=tenant-a \
-  --dart-define=GOOGLE_SERVER_CLIENT_ID=your-web-client-id.apps.googleusercontent.com \
-  --dart-define=GOOGLE_IOS_CLIENT_ID=your-ios-client-id.apps.googleusercontent.com
+  --dart-define=GOOGLE_SERVER_CLIENT_ID=your-web-client-id.apps.googleusercontent.com
 ```
+
+See [docs/E2E_LOCAL_RUN.md](docs/E2E_LOCAL_RUN.md) for cleartext debug config, physical-device hosts, and the E2E runbook.
 
 Supported `APP_ENV` values: `development`, `staging`, `production`.
 
