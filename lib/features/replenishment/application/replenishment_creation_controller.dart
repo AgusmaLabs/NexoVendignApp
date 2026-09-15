@@ -48,6 +48,16 @@ final class ReplenishmentCreationController extends ChangeNotifier {
   /// Exposed for tests — key reused across retries of the same intent.
   String? get pendingIdempotencyKey => _idempotencyKey;
 
+  /// Updates current replenishment after a successful add-line (or similar).
+  void applyUpdatedReplenishment(Replenishment replenishment) {
+    _currentReplenishment = replenishment;
+    if (_state is ReplenishmentCreationCreated) {
+      _setState(ReplenishmentCreationCreated(replenishment));
+    } else {
+      notifyListeners();
+    }
+  }
+
   Future<void> start() async {
     if (isCreating) {
       return;

@@ -198,11 +198,28 @@ class _CreatedView extends StatelessWidget {
         Text('Estado: ${replenishment.status}'),
         Text('ID: ${replenishment.id}'),
         const SizedBox(height: 24),
-        Text(
-          'Lista para agregar productos.',
-          style: theme.textTheme.bodyMedium,
-          textAlign: TextAlign.center,
-        ),
+        if (replenishment.lines.isEmpty)
+          Text(
+            'Lista para agregar productos.',
+            style: theme.textTheme.bodyMedium,
+            textAlign: TextAlign.center,
+          )
+        else ...[
+          Text(
+            'Líneas (${replenishment.lines.length})',
+            style: theme.textTheme.titleMedium,
+          ),
+          const SizedBox(height: 8),
+          ...replenishment.lines.map(
+            (line) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: Text(
+                '${line.productDescriptionSnapshot} × ${line.quantity}'
+                ' → ${line.slotId}',
+              ),
+            ),
+          ),
+        ],
         const SizedBox(height: 24),
         FilledButton(
           onPressed: () {

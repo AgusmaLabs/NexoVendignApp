@@ -30,8 +30,11 @@ import 'package:vendingapp/features/machine/domain/machine_slot_service.dart';
 import 'package:vendingapp/features/operator/application/operator_bootstrap_controller.dart';
 import 'package:vendingapp/features/operator/domain/operator.dart';
 import 'package:vendingapp/features/operator/domain/operator_service.dart';
+import 'package:vendingapp/features/replenishment/application/replenishment_add_line_controller.dart';
 import 'package:vendingapp/features/replenishment/application/replenishment_creation_controller.dart';
 import 'package:vendingapp/features/replenishment/domain/replenishment.dart';
+import 'package:vendingapp/features/replenishment/domain/replenishment_line.dart';
+import 'package:vendingapp/features/replenishment/domain/replenishment_line_service.dart';
 import 'package:vendingapp/features/replenishment/domain/replenishment_service.dart';
 import 'package:vendingapp/features/products/application/product_lookup_controller.dart';
 import 'package:vendingapp/features/products/domain/product.dart';
@@ -155,6 +158,28 @@ MachineSlot fakeMachineSlot({
   );
 }
 
+ReplenishmentLine fakeReplenishmentLine({
+  String id = 'line-1',
+  String slotId = 'slot-A01',
+  String? productId = 'prod-1',
+  int quantity = 12,
+  String unitPrice = '0.00',
+  String occurredAt = '2026-09-15T12:05:00+00:00',
+  String productDescriptionSnapshot = 'Coca Cola 350 ml',
+  String resolutionStatus = 'RESOLVED',
+}) {
+  return ReplenishmentLine(
+    id: id,
+    slotId: slotId,
+    productId: productId,
+    quantity: quantity,
+    unitPrice: unitPrice,
+    occurredAt: occurredAt,
+    productDescriptionSnapshot: productDescriptionSnapshot,
+    resolutionStatus: resolutionStatus,
+  );
+}
+
 Replenishment fakeReplenishment({
   String id = 'rep-1',
   String machineId = '11111111-1111-1111-1111-111111111111',
@@ -168,6 +193,7 @@ Replenishment fakeReplenishment({
   double latitude = -35.4264,
   double longitude = -71.6554,
   double? accuracy = 12.4,
+  List<ReplenishmentLine> lines = const <ReplenishmentLine>[],
 }) {
   return Replenishment(
     id: id,
@@ -184,6 +210,7 @@ Replenishment fakeReplenishment({
     ),
     idempotencyKey: idempotencyKey,
     version: version,
+    lines: lines,
   );
 }
 
@@ -226,6 +253,8 @@ AppDependencies testDependencies({
   MachineDetailController? machineDetailController,
   ReplenishmentService? replenishmentService,
   ReplenishmentCreationController? replenishmentCreationController,
+  ReplenishmentLineService? replenishmentLineService,
+  ReplenishmentAddLineController? replenishmentAddLineController,
   ProductLookupService? productLookupService,
   ProductLookupController? productLookupController,
   AuthenticationController? authenticationController,
@@ -245,6 +274,8 @@ AppDependencies testDependencies({
   final resolvedSlotService = machineSlotService ?? FakeMachineSlotService();
   final resolvedReplenishment =
       replenishmentService ?? FakeReplenishmentService();
+  final resolvedLineService =
+      replenishmentLineService ?? FakeReplenishmentLineService();
   final resolvedProductLookup =
       productLookupService ?? FakeProductLookupService();
   final resolvedRequestIds =
@@ -309,6 +340,17 @@ AppDependencies testDependencies({
         logger: resolvedLogger,
         onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
       );
+  final resolvedAddLineController =
+      replenishmentAddLineController ??
+      ReplenishmentAddLineController(
+        lineService: resolvedLineService,
+        replenishmentCreationController: resolvedReplenishmentController,
+        machineDetailController: resolvedDetailController,
+        sessionService: resolvedSession,
+        requestIdGenerator: resolvedRequestIds,
+        logger: resolvedLogger,
+        onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
+      );
 
   resolvedAuthController =
       authenticationController ??
@@ -326,6 +368,7 @@ AppDependencies testDependencies({
                 await resolvedMachineController.clear();
                 await resolvedDetailController.clear();
                 await resolvedReplenishmentController.clear();
+                await resolvedAddLineController.clear();
                 await resolvedProductLookupController.clear();
               }
             : null,
@@ -355,6 +398,8 @@ AppDependencies testDependencies({
     machineDetailController: resolvedDetailController,
     replenishmentService: resolvedReplenishment,
     replenishmentCreationController: resolvedReplenishmentController,
+    replenishmentLineService: resolvedLineService,
+    replenishmentAddLineController: resolvedAddLineController,
     productLookupService: resolvedProductLookup,
     productLookupController: resolvedProductLookupController,
     authenticationController: resolvedAuthController,
@@ -746,6 +791,72 @@ final class FakeReplenishmentService implements ReplenishmentService {
           machineId: machineId,
           idempotencyKey: idempotencyKey,
         );
+  }
+}
+
+final class FakeReplenishmentLineService implements ReplenishmentLineService {
+  FakeReplenishmentLineService({this.replenishment, this.error, this.pending});
+
+  Replenishment? replenishment;
+  Object? error;
+  Future<void>? pending;
+  var callCount = 0;
+  final replenishmentIds = <String>[];
+  final productIds = <String>[];
+  final quantities = <int>[];
+  final slotIds = <String>[];
+  final idempotencyKeys = <String>[];
+
+  @override
+  Future<Replenishment> addLine({
+    required String replenishmentId,
+    required String productId,
+    required int quantity,
+    required String slotId,
+    required String idempotencyKey,
+    String? replacementReason,
+  }) async {
+    callCount += 1;
+    replenishmentIds.add(replenishmentId);
+    productIds.add(productId);
+    quantities.add(quantity);
+    slotIds.add(slotId);
+    idempotencyKeys.add(idempotencyKey);
+    final gate = pending;
+    if (gate != null) {
+      await gate;
+    }
+    final failure = error;
+    if (failure != null) {
+      if (failure is Exception) {
+        throw failure;
+      }
+      throw Exception('$failure');
+    }
+    final base =
+        replenishment ??
+        fakeReplenishment(id: replenishmentId, version: 2);
+    final line = fakeReplenishmentLine(
+      id: 'line-${base.lines.length + 1}',
+      slotId: slotId,
+      productId: productId,
+      quantity: quantity,
+    );
+    return fakeReplenishment(
+      id: base.id,
+      machineId: base.machineId,
+      operatorId: base.operatorId,
+      status: base.status,
+      machineType: base.machineType,
+      startedAt: base.startedAt,
+      completedAt: base.completedAt,
+      idempotencyKey: base.idempotencyKey,
+      version: base.version + 1,
+      latitude: base.location.latitude,
+      longitude: base.location.longitude,
+      accuracy: base.location.accuracy,
+      lines: <ReplenishmentLine>[...base.lines, line],
+    );
   }
 }
 

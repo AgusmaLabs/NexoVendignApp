@@ -33,8 +33,11 @@ import '../../features/operator/domain/operator_service.dart';
 import '../../features/products/application/product_lookup_controller.dart';
 import '../../features/products/data/api_product_lookup_service.dart';
 import '../../features/products/domain/product_lookup_service.dart';
+import '../../features/replenishment/application/replenishment_add_line_controller.dart';
 import '../../features/replenishment/application/replenishment_creation_controller.dart';
+import '../../features/replenishment/data/api_replenishment_line_service.dart';
 import '../../features/replenishment/data/api_replenishment_service.dart';
+import '../../features/replenishment/domain/replenishment_line_service.dart';
 import '../../features/replenishment/domain/replenishment_service.dart';
 
 /// Composition root for VendingApp infrastructure dependencies.
@@ -62,6 +65,8 @@ final class AppDependencies {
     required this.machineDetailController,
     required this.replenishmentService,
     required this.replenishmentCreationController,
+    required this.replenishmentLineService,
+    required this.replenishmentAddLineController,
     required this.productLookupService,
     required this.productLookupController,
     required this.authenticationController,
@@ -90,6 +95,8 @@ final class AppDependencies {
   final MachineDetailController machineDetailController;
   final ReplenishmentService replenishmentService;
   final ReplenishmentCreationController replenishmentCreationController;
+  final ReplenishmentLineService replenishmentLineService;
+  final ReplenishmentAddLineController replenishmentAddLineController;
   final ProductLookupService productLookupService;
   final ProductLookupController productLookupController;
   final AuthenticationController authenticationController;
@@ -139,6 +146,10 @@ final class AppDependencies {
       logger: logger,
     );
     final replenishmentService = ApiReplenishmentService(
+      apiClient: apiClient,
+      logger: logger,
+    );
+    final replenishmentLineService = ApiReplenishmentLineService(
       apiClient: apiClient,
       logger: logger,
     );
@@ -195,6 +206,15 @@ final class AppDependencies {
       logger: logger,
       onSessionExpired: () => authenticationController.handleSessionExpired(),
     );
+    final replenishmentAddLineController = ReplenishmentAddLineController(
+      lineService: replenishmentLineService,
+      replenishmentCreationController: replenishmentCreationController,
+      machineDetailController: machineDetailController,
+      sessionService: sessionService,
+      requestIdGenerator: requestIdGenerator,
+      logger: logger,
+      onSessionExpired: () => authenticationController.handleSessionExpired(),
+    );
 
     final googleSignInConfig = GoogleSignInConfig.fromEnvironment(
       config.environment,
@@ -214,6 +234,7 @@ final class AppDependencies {
         await machineIdentificationController.clear();
         await machineDetailController.clear();
         await replenishmentCreationController.clear();
+        await replenishmentAddLineController.clear();
         await productLookupController.clear();
       },
     );
@@ -241,6 +262,8 @@ final class AppDependencies {
       machineDetailController: machineDetailController,
       replenishmentService: replenishmentService,
       replenishmentCreationController: replenishmentCreationController,
+      replenishmentLineService: replenishmentLineService,
+      replenishmentAddLineController: replenishmentAddLineController,
       productLookupService: productLookupService,
       productLookupController: productLookupController,
       authenticationController: authenticationController,

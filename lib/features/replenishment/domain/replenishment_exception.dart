@@ -102,3 +102,43 @@ final class ReplenishmentUnknownError extends ReplenishmentException {
     Object? cause,
   }) : super(message, cause: cause);
 }
+
+/// Missing active replenishment for add-line (no HTTP).
+final class ReplenishmentNoActiveSession extends ReplenishmentException {
+  const ReplenishmentNoActiveSession({
+    String message = 'Inicia una reposición antes de agregar productos.',
+    Object? cause,
+  }) : super(message, cause: cause);
+}
+
+/// Local quantity validation failed (no HTTP).
+final class ReplenishmentQuantityInvalid extends ReplenishmentException {
+  const ReplenishmentQuantityInvalid({
+    String message = 'La cantidad debe ser un entero mayor que cero.',
+    Object? cause,
+  }) : super(message, cause: cause);
+}
+
+/// Slot required by contract but missing (no HTTP).
+final class ReplenishmentSlotRequired extends ReplenishmentException {
+  const ReplenishmentSlotRequired({
+    String message = 'Selecciona un slot para agregar la línea.',
+    Object? cause,
+  }) : super(message, cause: cause);
+}
+
+/// Rate limited (`429`).
+final class ReplenishmentRateLimited extends ReplenishmentException {
+  const ReplenishmentRateLimited({
+    String message = 'Demasiadas operaciones. Intenta de nuevo en un momento.',
+    Object? cause,
+  }) : super(message, cause: cause);
+}
+
+/// Replenishment / product / slot not found (`404`) during add-line.
+final class ReplenishmentResourceNotFound extends ReplenishmentException {
+  const ReplenishmentResourceNotFound({
+    String message = 'No se encontró la reposición, el producto o el slot.',
+    Object? cause,
+  }) : super(message, cause: cause);
+}

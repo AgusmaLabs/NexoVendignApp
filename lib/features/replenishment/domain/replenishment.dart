@@ -1,3 +1,5 @@
+import 'replenishment_line.dart';
+
 /// Geographic coordinates associated with a replenishment.
 final class ReplenishmentLocation {
   const ReplenishmentLocation({
@@ -50,7 +52,7 @@ final class Replenishment {
     required this.idempotencyKey,
     required this.version,
     this.completedAt,
-    this.lines = const <Object?>[],
+    this.lines = const <ReplenishmentLine>[],
   }) {
     if (id.trim().isEmpty) {
       throw ArgumentError.value(id, 'id', 'must not be empty');
@@ -76,9 +78,7 @@ final class Replenishment {
   final ReplenishmentLocation location;
   final String idempotencyKey;
   final int version;
-
-  /// Lines are opaque in Commit 8 (always empty on create).
-  final List<Object?> lines;
+  final List<ReplenishmentLine> lines;
 
   factory Replenishment.fromJson(Map<String, Object?> json) {
     final id = json['id'] as String?;
@@ -104,6 +104,17 @@ final class Replenishment {
     }
 
     final linesRaw = json['lines'];
+    final lines = <ReplenishmentLine>[];
+    if (linesRaw is List) {
+      for (final item in linesRaw) {
+        if (item is Map) {
+          lines.add(
+            ReplenishmentLine.fromJson(Map<String, Object?>.from(item)),
+          );
+        }
+      }
+    }
+
     return Replenishment(
       id: id,
       machineId: machineId,
@@ -117,7 +128,7 @@ final class Replenishment {
       ),
       idempotencyKey: idempotencyKey,
       version: version,
-      lines: linesRaw is List ? List<Object?>.from(linesRaw) : const <Object?>[],
+      lines: lines,
     );
   }
 
@@ -133,12 +144,13 @@ final class Replenishment {
       'location': location.toJson(),
       'idempotency_key': idempotencyKey,
       'version': version,
-      'lines': lines,
+      'lines': lines.map((line) => line.toJson()).toList(),
     };
   }
 
   @override
   String toString() {
-    return 'Replenishment(id: $id, machineId: $machineId, status: $status)';
+    return 'Replenishment(id: $id, machineId: $machineId, status: $status, '
+        'lines: ${lines.length})';
   }
 }

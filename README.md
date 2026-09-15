@@ -85,12 +85,13 @@ Supported `APP_ENV` values: `development`, `staging`, `production`.
 | Machine Slots | ✅ |
 | Replenishment Creation | ✅ |
 | Product Lookup | ✅ |
-| Replenishment Lines | ⏳ |
+| Replenishment Lines | ✅ |
+| Unresolved Product | ⏳ |
 | Review | ⏳ |
 | Completion | ⏳ |
 | Cancellation | ⏳ |
 
-Implemented through Commit 9:
+Implemented through Commit 10:
 
 * application shell and infrastructure;
 * Google Sign-In → Session JWT → SecureStorage;
@@ -98,6 +99,7 @@ Implemented through Commit 9:
 * machine identification via `GET /api/v1/machines/resolve`;
 * machine detail + physical slots;
 * replenishment creation via `POST /api/v1/replenishments`;
-* barcode product lookup via `GET /api/v1/products/barcode/{barcode}` (+ camera / manual).
+* barcode product lookup via `GET /api/v1/products/barcode/{barcode}` (+ camera / manual);
+* replenishment lines via `POST /api/v1/replenishments/{id}/lines` (quantity + required slot).
 
-Replenishment lines arrive in subsequent commits.
+Unresolved product, review, completion, and cancellation arrive in subsequent commits.

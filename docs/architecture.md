@@ -1,6 +1,6 @@
 # VendingApp Architecture
 
-**Status:** Product lookup (Commit 9)
+**Status:** Replenishment lines (Commit 10)
 **Client:** Flutter
 **Backend:** NexoVending public HTTP API
 
@@ -55,10 +55,18 @@ Inventory Movement
 Product Lookup
         ≠
 Replenishment Line
+
+Replenishment Line
+        ≠
+Inventory Movement
 ```
 
 ```text
-Product catalog authority = NexoVending
+Catalog authority        = NexoVending
+Replenishment authority  = NexoVending
+Inventory authority      = NexoVending
+
+VendingApp               = capture + presentation + API consumer
 ```
 
 ## Dependency direction
@@ -93,7 +101,7 @@ lib/
 └── main.dart
 ```
 
-## Authentication + machine + replenishment + product
+## Authentication + machine + replenishment + product + line
 
 ```text
 AuthGate
@@ -102,13 +110,19 @@ AuthGate
   → machine detail + slots
   → POST /replenishments
   → GET /products/barcode/{barcode}
-  → Product ready for line flow (Commit 10)
+  → POST /replenishments/{id}/lines
+```
+
+```text
+Product
+   ↓
+Replenishment Line
 ```
 
 ## Infrastructure
 
 * `ApiClient` — Bearer + request IDs
-* `ReplenishmentService` / `ProductLookupService`
+* `ReplenishmentService` / `ReplenishmentLineService` / `ProductLookupService`
 * `BarcodeScanner` → `MobileBarcodeScanner` (`mobile_scanner`)
 * `LocationService` — GPS for replenishment create
 * `AppDependencies` — composition root
@@ -116,7 +130,7 @@ AuthGate
 ## Navigation
 
 `/login` → `/machines/identify` → `/machines/detail` →
-`/replenishments/start` → `/products/lookup`
+`/replenishments/start` → `/products/lookup` → `/replenishments/lines/add`
 
 ## Related documents
 
@@ -127,6 +141,7 @@ AuthGate
 * [Machine Detail](MACHINE_DETAIL.md)
 * [Replenishment](REPLENISHMENT.md)
 * [Product Lookup](PRODUCT_LOOKUP.md)
+* [Replenishment Lines](REPLENISHMENT_LINES.md)
 * [Networking](NETWORKING.md)
 * [ADR-001](adr/ADR-001-vendingapp-api-boundary.md)
 * [ADR-002](adr/ADR-002-google-sign-in-boundary.md)
@@ -136,4 +151,5 @@ AuthGate
 * [ADR-006](adr/ADR-006-machine-detail-and-slots.md)
 * [ADR-007](adr/ADR-007-replenishment-creation.md)
 * [ADR-008](adr/ADR-008-product-catalog-authority.md)
+* [ADR-009](adr/ADR-009-replenishment-line-authority.md)
 * [Product requirements](PRD.md)

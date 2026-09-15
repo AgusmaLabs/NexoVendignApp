@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../app/bootstrap/app_dependencies.dart';
 import '../../../app/router/app_router.dart';
+import '../../replenishment/application/replenishment_add_line_state.dart';
 import '../application/product_lookup_controller.dart';
 import '../application/product_lookup_state.dart';
 import '../domain/product.dart';
@@ -76,7 +77,17 @@ class _ProductLookupPageState extends State<ProductLookupPage> {
                     barcode: barcode,
                     product: product,
                     onContinue: () {
-                      widget.onContinue?.call(product);
+                      if (widget.onContinue != null) {
+                        widget.onContinue!(product);
+                        return;
+                      }
+                      Navigator.of(context).pushNamed(
+                        AppRouter.replenishmentAddLinePath,
+                        arguments: AddLineArgs(
+                          product: product,
+                          barcode: barcode,
+                        ),
+                      );
                     },
                     onScanAgain: effectiveController.resetToIdle,
                   ),

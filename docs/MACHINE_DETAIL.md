@@ -128,11 +128,27 @@ Stale responses are ignored: a later `load(B)` supersedes an in-flight
 * Slot selection is UI state only.
 
 From detail, the operator continues to [replenishment creation](REPLENISHMENT.md).
+Loaded slots are later reused when adding [replenishment lines](REPLENISHMENT_LINES.md):
+
+```text
+MachineSlot = physical container
+```
+
+not:
+
+```text
+MachineSlot = fixed SKU
+```
+
+`preferred_product_id` remains configuration only. Replenishment does not require
+the scanned product to match the preferred product.
 
 ## Related
 
 * [MACHINE_IDENTIFICATION.md](MACHINE_IDENTIFICATION.md)
 * [REPLENISHMENT.md](REPLENISHMENT.md)
+* [REPLENISHMENT_LINES.md](REPLENISHMENT_LINES.md)
 * [ADR-006](adr/ADR-006-machine-detail-and-slots.md)
 * [ADR-007](adr/ADR-007-replenishment-creation.md)
+* [ADR-009](adr/ADR-009-replenishment-line-authority.md)
 * [Mobile API Contract](nexovending_API/Mobile_API_Contract_NexoVending.md)
