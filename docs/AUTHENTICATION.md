@@ -1,6 +1,6 @@
-# VendingApp Authentication
+﻿# VendingApp Authentication
 
-## Current flow (Commit 5)
+## Current flow
 
 ```text
 Google Sign-In
@@ -17,8 +17,22 @@ GET /operators/me
       ↓
 Vending Operator
       ↓
-Application shell
+Machine / Replenishment / Product Lookup
 ```
+
+Product lookup (and later replenishment lines) use the Session JWT only:
+
+```text
+Google
+  ↓
+Session JWT
+  ↓
+ApiClient
+  ↓
+Product Lookup
+```
+
+Google `id_token` is never sent to product endpoints.
 
 | Commit | Meaning |
 | ------ | ------- |
@@ -61,6 +75,7 @@ See platform setup details in prior sections of this document and
 
 * [SESSION.md](SESSION.md)
 * [OPERATOR_BOOTSTRAP.md](OPERATOR_BOOTSTRAP.md)
+* [PRODUCT_LOOKUP.md](PRODUCT_LOOKUP.md)
 * [ADR-002](adr/ADR-002-google-sign-in-boundary.md)
 * [ADR-003](adr/ADR-003-session-token-storage.md)
 * [ADR-004](adr/ADR-004-operator-bootstrap.md)

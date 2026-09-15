@@ -203,6 +203,13 @@ class _CreatedView extends StatelessWidget {
           style: theme.textTheme.bodyMedium,
           textAlign: TextAlign.center,
         ),
+        const SizedBox(height: 24),
+        FilledButton(
+          onPressed: () {
+            Navigator.of(context).pushNamed(AppRouter.productLookupPath);
+          },
+          child: const Text('Escanear producto'),
+        ),
       ],
     );
   }

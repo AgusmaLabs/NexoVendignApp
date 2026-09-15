@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../features/authentication/presentation/auth_gate.dart';
 import '../../features/machine/presentation/identify_machine_page.dart';
 import '../../features/machine/presentation/machine_detail_page.dart';
+import '../../features/products/presentation/product_lookup_page.dart';
 import '../../features/replenishment/presentation/replenishment_start_page.dart';
 import '../bootstrap/app_dependencies.dart';
 import '../home/unknown_route_page.dart';
@@ -17,6 +18,7 @@ abstract final class AppRouter {
   static const String identifyMachinePath = '/machines/identify';
   static const String machineDetailPath = '/machines/detail';
   static const String replenishmentStartPath = '/replenishments/start';
+  static const String productLookupPath = '/products/lookup';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -70,6 +72,17 @@ abstract final class AppRouter {
             );
           },
         );
+      case productLookupPath:
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) {
+            final deps = AppDependenciesScope.of(context);
+            return ProductLookupPage(
+              controller: deps.productLookupController,
+              onSignOut: () => _signOut(context, deps),
+            );
+          },
+        );
       default:
         return MaterialPageRoute<void>(
           settings: settings,
@@ -80,6 +93,7 @@ abstract final class AppRouter {
   }
 
   static void _signOut(BuildContext context, AppDependencies deps) {
+    deps.productLookupController.clear();
     deps.replenishmentCreationController.clear();
     deps.machineDetailController.clear();
     deps.machineIdentificationController.clear();

@@ -1,6 +1,6 @@
 # VendingApp Architecture
 
-**Status:** Replenishment creation (Commit 8)
+**Status:** Product lookup (Commit 9)
 **Client:** Flutter
 **Backend:** NexoVending public HTTP API
 
@@ -38,6 +38,8 @@ Current Machine
       ↓
 Current Replenishment
       ↓
+Product Lookup
+      ↓
 Replenishment Lines
       ↓
 Completion
@@ -49,22 +51,28 @@ Backend Inventory Transaction
 Create Replenishment
         ≠
 Inventory Movement
+
+Product Lookup
+        ≠
+Replenishment Line
+```
+
+```text
+Product catalog authority = NexoVending
 ```
 
 ## Dependency direction
 
 ```text
-UI
- ↓
+Presentation
+    ↓
 Application
- ↓
+    ↓
 Domain
- ↓
-Data
- ↓
-Core Infrastructure
- ↓
-External Systems
+    ↓
+Infrastructure / Data
+    ↓
+NexoVending API
 ```
 
 Core infrastructure must not contain vending business rules.
@@ -74,81 +82,41 @@ Core infrastructure must not contain vending business rules.
 ```text
 lib/
 ├── app/
-│   ├── bootstrap/app_dependencies.dart
-│   ├── home/
-│   ├── router/
-│   ├── theme/
-│   └── app.dart
 ├── core/
-│   ├── authentication/
-│   ├── config/
-│   ├── networking/
-│   ├── errors/
-│   ├── logging/
-│   ├── storage/
-│   ├── time/
-│   └── device/
+│   └── device/   (BarcodeScanner, LocationService, …)
 ├── features/
 │   ├── authentication/
 │   ├── operator/
 │   ├── machine/
-│   └── replenishment/
+│   ├── replenishment/
+│   └── products/
 └── main.dart
 ```
 
-## Authentication + session + operator + machine + replenishment
+## Authentication + machine + replenishment + product
 
 ```text
 AuthGate
-  → Login (Google → Session)
-  → OperatorBootstrapController
-  → GET /api/v1/operators/me
-  → Identify machine
-  → GET /api/v1/machines/resolve
-  → Machine detail + slots (concurrent)
-  → Start replenishment
-  → LocationService → GPS coordinates
-  → POST /api/v1/replenishments
-  → Current Replenishment (IN_PROGRESS, empty lines)
+  → operators/me
+  → machines/resolve
+  → machine detail + slots
+  → POST /replenishments
+  → GET /products/barcode/{barcode}
+  → Product ready for line flow (Commit 10)
 ```
-
-```text
-MachineSlot
-     │
-     ├── physical position
-     ├── capacity
-     ├── preferred product
-     └── selling price
-```
-
-Not a fixed SKU assignment.
-
-* Session JWT authority: authentication.
-* `/operators/me` authority: Vending operator identity.
-* Machine/slots authority: NexoVending configuration.
-* Replenishment create authority: NexoVending (idempotent POST).
-* Flutter does not fabricate operators or authorize replenishment.
 
 ## Infrastructure
 
-* `ApiClient` — HTTP access; optional `authenticated: true` attaches Bearer.
-* `SessionService` / `SecureStorage` — session persistence.
-* `OperatorService` — operator bootstrap only.
-* `MachineService` / `MachineDetailService` / `MachineSlotService` — machine APIs.
-* `ReplenishmentService` — create replenishment sessions.
-* `LocationService` — GPS for create payload.
-* `AppDependencies` — composition root.
+* `ApiClient` — Bearer + request IDs
+* `ReplenishmentService` / `ProductLookupService`
+* `BarcodeScanner` → `MobileBarcodeScanner` (`mobile_scanner`)
+* `LocationService` — GPS for replenishment create
+* `AppDependencies` — composition root
 
-## Configuration
+## Navigation
 
-`AppConfig` holds `environment`, `apiBaseUrl`, `tenantId`, and `httpTimeout`.
-Google client IDs via `--dart-define`.
-
-## Navigation and theme
-
-* `AppRouter` initial route `/login` → `AuthGate`.
-* `/machines/identify` → `/machines/detail` → `/replenishments/start`.
-* `AppTheme` owns global `ThemeData`.
+`/login` → `/machines/identify` → `/machines/detail` →
+`/replenishments/start` → `/products/lookup`
 
 ## Related documents
 
@@ -158,6 +126,7 @@ Google client IDs via `--dart-define`.
 * [Machine Identification](MACHINE_IDENTIFICATION.md)
 * [Machine Detail](MACHINE_DETAIL.md)
 * [Replenishment](REPLENISHMENT.md)
+* [Product Lookup](PRODUCT_LOOKUP.md)
 * [Networking](NETWORKING.md)
 * [ADR-001](adr/ADR-001-vendingapp-api-boundary.md)
 * [ADR-002](adr/ADR-002-google-sign-in-boundary.md)
@@ -166,4 +135,5 @@ Google client IDs via `--dart-define`.
 * [ADR-005](adr/ADR-005-machine-identification.md)
 * [ADR-006](adr/ADR-006-machine-detail-and-slots.md)
 * [ADR-007](adr/ADR-007-replenishment-creation.md)
+* [ADR-008](adr/ADR-008-product-catalog-authority.md)
 * [Product requirements](PRD.md)

@@ -110,6 +110,16 @@ Create does **not**:
 * decrement stock;
 * invent replenishment lines.
 
+## Next step
+
+```text
+Current Replenishment
+        ↓
+Product Lookup
+```
+
+See [PRODUCT_LOOKUP.md](PRODUCT_LOOKUP.md). Commit 10 adds replenishment lines.
+
 ## Security
 
 * Operator from session (`/operators/me` already loaded).
@@ -120,5 +130,6 @@ Create does **not**:
 ## Related
 
 * [MACHINE_DETAIL.md](MACHINE_DETAIL.md)
+* [PRODUCT_LOOKUP.md](PRODUCT_LOOKUP.md)
 * [ADR-007](adr/ADR-007-replenishment-creation.md)
 * [Mobile API Contract](nexovending_API/Mobile_API_Contract_NexoVending.md)

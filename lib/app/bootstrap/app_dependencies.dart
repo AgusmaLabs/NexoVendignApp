@@ -10,6 +10,7 @@ import '../../core/config/app_config.dart';
 import '../../core/device/barcode_scanner.dart';
 import '../../core/device/connectivity_service.dart';
 import '../../core/device/location_service.dart';
+import '../../core/device/mobile_barcode_scanner.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/networking/request_id.dart';
@@ -29,6 +30,9 @@ import '../../features/machine/domain/machine_slot_service.dart';
 import '../../features/operator/application/operator_bootstrap_controller.dart';
 import '../../features/operator/data/api_operator_service.dart';
 import '../../features/operator/domain/operator_service.dart';
+import '../../features/products/application/product_lookup_controller.dart';
+import '../../features/products/data/api_product_lookup_service.dart';
+import '../../features/products/domain/product_lookup_service.dart';
 import '../../features/replenishment/application/replenishment_creation_controller.dart';
 import '../../features/replenishment/data/api_replenishment_service.dart';
 import '../../features/replenishment/domain/replenishment_service.dart';
@@ -46,6 +50,7 @@ final class AppDependencies {
     required this.connectivityService,
     required this.locationService,
     required this.barcodeScanner,
+    required this.navigatorKey,
     required this.googleSignInService,
     required this.sessionService,
     required this.operatorService,
@@ -57,6 +62,8 @@ final class AppDependencies {
     required this.machineDetailController,
     required this.replenishmentService,
     required this.replenishmentCreationController,
+    required this.productLookupService,
+    required this.productLookupController,
     required this.authenticationController,
     required this.clock,
   });
@@ -71,6 +78,7 @@ final class AppDependencies {
   final ConnectivityService connectivityService;
   final LocationService locationService;
   final BarcodeScanner barcodeScanner;
+  final GlobalKey<NavigatorState> navigatorKey;
   final GoogleSignInService googleSignInService;
   final SessionService sessionService;
   final OperatorService operatorService;
@@ -82,6 +90,8 @@ final class AppDependencies {
   final MachineDetailController machineDetailController;
   final ReplenishmentService replenishmentService;
   final ReplenishmentCreationController replenishmentCreationController;
+  final ProductLookupService productLookupService;
+  final ProductLookupController productLookupController;
   final AuthenticationController authenticationController;
   final Clock clock;
 
@@ -109,6 +119,9 @@ final class AppDependencies {
     );
     credentialProvider.delegate = sessionService;
 
+    final navigatorKey = GlobalKey<NavigatorState>();
+    final barcodeScanner = MobileBarcodeScanner(navigatorKey: navigatorKey);
+
     final operatorService = ApiOperatorService(
       apiClient: apiClient,
       logger: logger,
@@ -129,9 +142,11 @@ final class AppDependencies {
       apiClient: apiClient,
       logger: logger,
     );
+    final productLookupService = ApiProductLookupService(
+      apiClient: apiClient,
+      logger: logger,
+    );
 
-    // Contract requires GPS on create; real device GPS arrives later.
-    // Development uses fixed coords so local API testing can proceed.
     final locationService = config.environment == AppEnvironment.production
         ? const UnsupportedLocationService()
         : const FixedLocationService(
@@ -172,6 +187,14 @@ final class AppDependencies {
       logger: logger,
       onSessionExpired: () => authenticationController.handleSessionExpired(),
     );
+    final productLookupController = ProductLookupController(
+      productLookupService: productLookupService,
+      barcodeScanner: barcodeScanner,
+      replenishmentCreationController: replenishmentCreationController,
+      sessionService: sessionService,
+      logger: logger,
+      onSessionExpired: () => authenticationController.handleSessionExpired(),
+    );
 
     final googleSignInConfig = GoogleSignInConfig.fromEnvironment(
       config.environment,
@@ -191,6 +214,7 @@ final class AppDependencies {
         await machineIdentificationController.clear();
         await machineDetailController.clear();
         await replenishmentCreationController.clear();
+        await productLookupController.clear();
       },
     );
 
@@ -204,7 +228,8 @@ final class AppDependencies {
       requestIdGenerator: requestIdGenerator,
       connectivityService: const UnsupportedConnectivityService(),
       locationService: locationService,
-      barcodeScanner: const UnsupportedBarcodeScanner(),
+      barcodeScanner: barcodeScanner,
+      navigatorKey: navigatorKey,
       googleSignInService: googleSignInService,
       sessionService: sessionService,
       operatorService: operatorService,
@@ -216,6 +241,8 @@ final class AppDependencies {
       machineDetailController: machineDetailController,
       replenishmentService: replenishmentService,
       replenishmentCreationController: replenishmentCreationController,
+      productLookupService: productLookupService,
+      productLookupController: productLookupController,
       authenticationController: authenticationController,
       clock: clock,
     );

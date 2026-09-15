@@ -32,6 +32,7 @@ See:
 * [docs/MACHINE_IDENTIFICATION.md](docs/MACHINE_IDENTIFICATION.md)
 * [docs/MACHINE_DETAIL.md](docs/MACHINE_DETAIL.md)
 * [docs/REPLENISHMENT.md](docs/REPLENISHMENT.md)
+* [docs/PRODUCT_LOOKUP.md](docs/PRODUCT_LOOKUP.md)
 * [docs/NETWORKING.md](docs/NETWORKING.md)
 * [docs/adr/ADR-001-vendingapp-api-boundary.md](docs/adr/ADR-001-vendingapp-api-boundary.md)
 * [docs/adr/ADR-002-google-sign-in-boundary.md](docs/adr/ADR-002-google-sign-in-boundary.md)
@@ -40,6 +41,7 @@ See:
 * [docs/adr/ADR-005-machine-identification.md](docs/adr/ADR-005-machine-identification.md)
 * [docs/adr/ADR-006-machine-detail-and-slots.md](docs/adr/ADR-006-machine-detail-and-slots.md)
 * [docs/adr/ADR-007-replenishment-creation.md](docs/adr/ADR-007-replenishment-creation.md)
+* [docs/adr/ADR-008-product-catalog-authority.md](docs/adr/ADR-008-product-catalog-authority.md)
 
 ## Tooling
 
@@ -82,19 +84,20 @@ Supported `APP_ENV` values: `development`, `staging`, `production`.
 | Machine Detail | ✅ |
 | Machine Slots | ✅ |
 | Replenishment Creation | ✅ |
-| Product Lookup | ⏳ |
+| Product Lookup | ✅ |
 | Replenishment Lines | ⏳ |
 | Review | ⏳ |
 | Completion | ⏳ |
 | Cancellation | ⏳ |
 
-Implemented through Commit 8:
+Implemented through Commit 9:
 
 * application shell and infrastructure;
 * Google Sign-In → Session JWT → SecureStorage;
 * operator bootstrap via `GET /api/v1/operators/me`;
 * machine identification via `GET /api/v1/machines/resolve`;
-* machine detail + physical slots via `GET /api/v1/machines/{id}` and `/slots`;
-* replenishment creation via `POST /api/v1/replenishments` (GPS + Idempotency-Key).
+* machine detail + physical slots;
+* replenishment creation via `POST /api/v1/replenishments`;
+* barcode product lookup via `GET /api/v1/products/barcode/{barcode}` (+ camera / manual).
 
-Product lookup and replenishment lines arrive in subsequent commits.
+Replenishment lines arrive in subsequent commits.

@@ -33,6 +33,10 @@ import 'package:vendingapp/features/operator/domain/operator_service.dart';
 import 'package:vendingapp/features/replenishment/application/replenishment_creation_controller.dart';
 import 'package:vendingapp/features/replenishment/domain/replenishment.dart';
 import 'package:vendingapp/features/replenishment/domain/replenishment_service.dart';
+import 'package:vendingapp/features/products/application/product_lookup_controller.dart';
+import 'package:vendingapp/features/products/domain/product.dart';
+import 'package:vendingapp/features/products/domain/product_lookup_service.dart';
+import 'package:flutter/widgets.dart';
 
 AppConfig testConfig({
   String apiBaseUrl = 'http://localhost:8080',
@@ -183,6 +187,22 @@ Replenishment fakeReplenishment({
   );
 }
 
+Product fakeProduct({
+  String productId = 'prod-1',
+  String barcode = '7801234567890',
+  String name = 'Coca Cola 350 ml',
+  String status = 'ACTIVE',
+  String unit = 'CAN',
+}) {
+  return Product(
+    productId: productId,
+    barcode: barcode,
+    name: name,
+    status: status,
+    unit: unit,
+  );
+}
+
 AppDependencies testDependencies({
   AppConfig? config,
   GoogleSignInConfig? googleSignInConfig,
@@ -194,6 +214,7 @@ AppDependencies testDependencies({
   ConnectivityService? connectivityService,
   LocationService? locationService,
   BarcodeScanner? barcodeScanner,
+  GlobalKey<NavigatorState>? navigatorKey,
   GoogleSignInService? googleSignInService,
   SessionService? sessionService,
   OperatorService? operatorService,
@@ -205,6 +226,8 @@ AppDependencies testDependencies({
   MachineDetailController? machineDetailController,
   ReplenishmentService? replenishmentService,
   ReplenishmentCreationController? replenishmentCreationController,
+  ProductLookupService? productLookupService,
+  ProductLookupController? productLookupController,
   AuthenticationController? authenticationController,
   Clock? clock,
   bool wireOperatorBootstrap = true,
@@ -222,6 +245,8 @@ AppDependencies testDependencies({
   final resolvedSlotService = machineSlotService ?? FakeMachineSlotService();
   final resolvedReplenishment =
       replenishmentService ?? FakeReplenishmentService();
+  final resolvedProductLookup =
+      productLookupService ?? FakeProductLookupService();
   final resolvedRequestIds =
       requestIdGenerator ?? UuidRequestIdGenerator();
   final resolvedLocation =
@@ -233,6 +258,8 @@ AppDependencies testDependencies({
           accuracyMeters: 12.4,
         ),
       );
+  final resolvedScanner = barcodeScanner ?? FakeBarcodeScanner('7801234567890');
+  final resolvedNavigatorKey = navigatorKey ?? GlobalKey<NavigatorState>();
 
   late final AuthenticationController resolvedAuthController;
   final resolvedBootstrap =
@@ -272,6 +299,16 @@ AppDependencies testDependencies({
         logger: resolvedLogger,
         onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
       );
+  final resolvedProductLookupController =
+      productLookupController ??
+      ProductLookupController(
+        productLookupService: resolvedProductLookup,
+        barcodeScanner: resolvedScanner,
+        replenishmentCreationController: resolvedReplenishmentController,
+        sessionService: resolvedSession,
+        logger: resolvedLogger,
+        onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
+      );
 
   resolvedAuthController =
       authenticationController ??
@@ -289,6 +326,7 @@ AppDependencies testDependencies({
                 await resolvedMachineController.clear();
                 await resolvedDetailController.clear();
                 await resolvedReplenishmentController.clear();
+                await resolvedProductLookupController.clear();
               }
             : null,
       );
@@ -304,7 +342,8 @@ AppDependencies testDependencies({
     connectivityService:
         connectivityService ?? const UnsupportedConnectivityService(),
     locationService: resolvedLocation,
-    barcodeScanner: barcodeScanner ?? const UnsupportedBarcodeScanner(),
+    barcodeScanner: resolvedScanner,
+    navigatorKey: resolvedNavigatorKey,
     googleSignInService: resolvedGoogleSignIn,
     sessionService: resolvedSession,
     operatorService: resolvedOperator,
@@ -316,6 +355,8 @@ AppDependencies testDependencies({
     machineDetailController: resolvedDetailController,
     replenishmentService: resolvedReplenishment,
     replenishmentCreationController: resolvedReplenishmentController,
+    productLookupService: resolvedProductLookup,
+    productLookupController: resolvedProductLookupController,
     authenticationController: resolvedAuthController,
     clock: resolvedClock,
   );
@@ -705,6 +746,52 @@ final class FakeReplenishmentService implements ReplenishmentService {
           machineId: machineId,
           idempotencyKey: idempotencyKey,
         );
+  }
+}
+
+final class FakeProductLookupService implements ProductLookupService {
+  FakeProductLookupService({this.product, this.error, this.pending});
+
+  Product? product;
+  Object? error;
+  Future<void>? pending;
+  var callCount = 0;
+  final barcodes = <String>[];
+
+  @override
+  Future<Product> lookupByBarcode(String barcode) async {
+    callCount += 1;
+    barcodes.add(barcode);
+    final gate = pending;
+    if (gate != null) {
+      await gate;
+    }
+    final failure = error;
+    if (failure != null) {
+      if (failure is Exception) {
+        throw failure;
+      }
+      throw Exception('$failure');
+    }
+    return product ?? fakeProduct(barcode: barcode);
+  }
+}
+
+final class FakeBarcodeScanner implements BarcodeScanner {
+  FakeBarcodeScanner(this.value, {this.pending});
+
+  String? value;
+  Future<void>? pending;
+  var callCount = 0;
+
+  @override
+  Future<String?> scan() async {
+    callCount += 1;
+    final gate = pending;
+    if (gate != null) {
+      await gate;
+    }
+    return value;
   }
 }
 
