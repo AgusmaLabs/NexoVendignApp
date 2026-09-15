@@ -1,6 +1,6 @@
 # VendingApp Architecture
 
-**Status:** Google authentication foundation (Commit 3)
+**Status:** Operator bootstrap (Commit 5)
 **Client:** Flutter
 **Backend:** NexoVending public HTTP API
 
@@ -25,6 +25,18 @@ VendingApp
 
 Flutter captures and presents. NexoVending decides and persists.
 
+## Identity stack
+
+```text
+Google Identity
+      ↓
+NexoVending Session
+      ↓
+Vending Operator
+      ↓
+Vending Features
+```
+
 ## Dependency direction
 
 ```text
@@ -43,32 +55,7 @@ External Systems
 
 Core infrastructure must not contain vending business rules.
 
-Only layers that exist should be present in the codebase. Empty layers must not
-be created merely to match this diagram.
-
 ## Current structure
-
-```text
-VendingApp
-│
-├── app/
-│   ├── bootstrap/
-│   ├── home/
-│   ├── router/
-│   └── theme/
-│
-├── core/
-│   ├── authentication/
-│   ├── config/
-│   ├── networking/
-│   ├── errors/
-│   ├── logging/
-│   ├── storage/
-│   └── device/
-│
-└── features/
-    └── authentication/
-```
 
 ```text
 lib/
@@ -85,53 +72,59 @@ lib/
 │   ├── errors/
 │   ├── logging/
 │   ├── storage/
+│   ├── time/
 │   └── device/
 ├── features/
-│   └── authentication/
+│   ├── authentication/
+│   │   ├── application/
+│   │   └── presentation/
+│   └── operator/
 │       ├── application/
+│       ├── data/
+│       ├── domain/
 │       └── presentation/
 └── main.dart
 ```
 
-## Authentication (Commit 3)
+## Authentication + session + operator
 
 ```text
-Login UI
-  → AuthenticationController
-  → GoogleSignInService
-  → Google Sign-In SDK
-  → id_token (memory only)
+AuthGate
+  → Login (Google → Session)
+  → OperatorBootstrapController
+  → GET /api/v1/operators/me
+  → Operator home shell
 ```
 
-* Official dependency: `google_sign_in`.
-* `Authenticated` means Google identity only — **not** a NexoVending session.
-* `POST /api/v1/auth/session` is intentionally not implemented yet.
+* Session JWT authority: authentication.
+* `/operators/me` authority: Vending operator identity.
+* Flutter does not fabricate operators or authorize replenishment.
 
 ## Infrastructure
 
-* `ApiClient` — HTTP access to the public API (`AppConfig.apiBaseUrl`).
-* `AppLogger` — centralized logging without secrets.
-* `LocalStorage` / `SecureStorage` — injectable persistence contracts.
-* `ConnectivityService`, `LocationService`, `BarcodeScanner` — device contracts
-  (platform implementations arrive with later commits).
-* `AppDependencies` — composition root; widgets must not construct infrastructure.
+* `ApiClient` — HTTP access; optional `authenticated: true` attaches Bearer.
+* `SessionService` / `SecureStorage` — session persistence.
+* `OperatorService` — operator bootstrap only.
+* `AppDependencies` — composition root.
 
 ## Configuration
 
-`AppConfig` holds `environment`, `apiBaseUrl`, and `httpTimeout`.
-`GoogleSignInConfig` holds Google client IDs via `--dart-define`.
+`AppConfig` holds `environment`, `apiBaseUrl`, `tenantId`, and `httpTimeout`.
+Google client IDs via `--dart-define`.
 
 ## Navigation and theme
 
-* `AppRouter` owns named routes. The initial route is `/login`.
-* `AppTheme` owns the global `ThemeData`. Features must not create a second
-  global theme.
+* `AppRouter` initial route `/login` → `AuthGate`.
+* `AppTheme` owns global `ThemeData`.
 
 ## Related documents
 
 * [Authentication](AUTHENTICATION.md)
+* [Session](SESSION.md)
+* [Operator Bootstrap](OPERATOR_BOOTSTRAP.md)
 * [Networking](NETWORKING.md)
-* [ADR-001: VendingApp API Boundary](adr/ADR-001-vendingapp-api-boundary.md)
-* [ADR-002: Google Sign-In Boundary](adr/ADR-002-google-sign-in-boundary.md)
-* [Architecture plan (pre-implementation)](architecture-plan.md)
+* [ADR-001](adr/ADR-001-vendingapp-api-boundary.md)
+* [ADR-002](adr/ADR-002-google-sign-in-boundary.md)
+* [ADR-003](adr/ADR-003-session-token-storage.md)
+* [ADR-004](adr/ADR-004-operator-bootstrap.md)
 * [Product requirements](PRD.md)

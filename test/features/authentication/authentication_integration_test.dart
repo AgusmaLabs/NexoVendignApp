@@ -6,9 +6,7 @@ import 'package:vendingapp/features/authentication/application/authentication_st
 import '../../support/test_doubles.dart';
 
 void main() {
-  testWidgets('login UI → AuthenticationController → FakeGoogleSignInService', (
-    tester,
-  ) async {
+  testWidgets('login UI → Google → session → Authenticated', (tester) async {
     final google = FakeGoogleSignInService(
       result: fakeGoogleResult(idToken: 'fake-google-id-token'),
     );
@@ -28,8 +26,9 @@ void main() {
 
     expect(dependencies.authenticationController.state, isA<Authenticated>());
     expect(google.signInCallCount, 1);
-    expect(find.text('Autenticado con Google'), findsOneWidget);
+    expect(find.textContaining('Bienvenido'), findsOneWidget);
     expect(find.textContaining('fake-google-id-token'), findsNothing);
+    expect(find.textContaining('test-session-token'), findsNothing);
     expect(logger.hasSensitiveLeak, isFalse);
   });
 

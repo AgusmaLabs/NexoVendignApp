@@ -3,6 +3,9 @@ import 'package:vendingapp/core/authentication/authentication_exception.dart';
 import 'package:vendingapp/core/authentication/google_authentication_result.dart';
 import 'package:vendingapp/core/authentication/google_sign_in_config.dart';
 import 'package:vendingapp/core/authentication/google_sign_in_service.dart';
+import 'package:vendingapp/core/authentication/session.dart';
+import 'package:vendingapp/core/authentication/session_credential_provider.dart';
+import 'package:vendingapp/core/authentication/session_service.dart';
 import 'package:vendingapp/core/config/app_config.dart';
 import 'package:vendingapp/core/device/barcode_scanner.dart';
 import 'package:vendingapp/core/device/connectivity_service.dart';
@@ -14,15 +17,21 @@ import 'package:vendingapp/core/networking/api_response.dart';
 import 'package:vendingapp/core/networking/request_id.dart';
 import 'package:vendingapp/core/storage/local_storage.dart';
 import 'package:vendingapp/core/storage/secure_storage.dart';
+import 'package:vendingapp/core/time/clock.dart';
 import 'package:vendingapp/features/authentication/application/authentication_controller.dart';
+import 'package:vendingapp/features/operator/application/operator_bootstrap_controller.dart';
+import 'package:vendingapp/features/operator/domain/operator.dart';
+import 'package:vendingapp/features/operator/domain/operator_service.dart';
 
 AppConfig testConfig({
   String apiBaseUrl = 'http://localhost:8080',
+  String tenantId = 'tenant-a',
   Duration httpTimeout = const Duration(seconds: 30),
 }) {
   return AppConfig(
     environment: AppEnvironment.development,
     apiBaseUrl: apiBaseUrl,
+    tenantId: tenantId,
     httpTimeout: httpTimeout,
   );
 }
@@ -41,6 +50,44 @@ GoogleAuthenticationResult fakeGoogleResult({
   );
 }
 
+Session fakeSession({
+  String accessToken = 'test-session-token',
+  String tokenType = 'Bearer',
+  int expiresIn = 3600,
+  DateTime? expiresAt,
+  DateTime? issuedAt,
+}) {
+  final issued = (issuedAt ?? DateTime.utc(2026, 9, 15, 12)).toUtc();
+  return Session(
+    accessToken: accessToken,
+    tokenType: tokenType,
+    expiresIn: expiresIn,
+    expiresAt: expiresAt ?? issued.add(Duration(seconds: expiresIn)),
+  );
+}
+
+Operator fakeOperator({
+  String operatorId = 'op-1',
+  String tenantId = 'tenant-a',
+  String role = 'replenisher',
+  String status = 'active',
+  String? displayName = 'Ada Operator',
+  String? email = 'operator@example.com',
+  String provider = 'google',
+  String subject = 'google-sub-1',
+}) {
+  return Operator(
+    operatorId: operatorId,
+    tenantId: tenantId,
+    role: role,
+    status: status,
+    displayName: displayName,
+    email: email,
+    provider: provider,
+    subject: subject,
+  );
+}
+
 AppDependencies testDependencies({
   AppConfig? config,
   GoogleSignInConfig? googleSignInConfig,
@@ -53,16 +100,44 @@ AppDependencies testDependencies({
   LocationService? locationService,
   BarcodeScanner? barcodeScanner,
   GoogleSignInService? googleSignInService,
+  SessionService? sessionService,
+  OperatorService? operatorService,
+  OperatorBootstrapController? operatorBootstrapController,
   AuthenticationController? authenticationController,
+  Clock? clock,
+  bool wireOperatorBootstrap = true,
 }) {
   final resolvedConfig = config ?? testConfig();
   final resolvedLogger = logger ?? RecordingAppLogger();
   final resolvedGoogleSignIn = googleSignInService ?? FakeGoogleSignInService();
-  final resolvedAuthController =
+  final resolvedClock = clock ?? FakeClock(DateTime.utc(2026, 9, 15, 12));
+  final resolvedSession =
+      sessionService ?? FakeSessionService(clock: resolvedClock);
+  final resolvedOperator = operatorService ?? FakeOperatorService();
+
+  late final AuthenticationController resolvedAuthController;
+  final resolvedBootstrap =
+      operatorBootstrapController ??
+      OperatorBootstrapController(
+        operatorService: resolvedOperator,
+        sessionService: resolvedSession,
+        logger: resolvedLogger,
+        onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
+      );
+
+  resolvedAuthController =
       authenticationController ??
       AuthenticationController(
         googleSignInService: resolvedGoogleSignIn,
+        sessionService: resolvedSession,
+        config: resolvedConfig,
         logger: resolvedLogger,
+        afterSessionEstablished: wireOperatorBootstrap
+            ? resolvedBootstrap.load
+            : null,
+        afterSessionCleared: wireOperatorBootstrap
+            ? resolvedBootstrap.clear
+            : null,
       );
 
   return AppDependencies(
@@ -78,7 +153,11 @@ AppDependencies testDependencies({
     locationService: locationService ?? const UnsupportedLocationService(),
     barcodeScanner: barcodeScanner ?? const UnsupportedBarcodeScanner(),
     googleSignInService: resolvedGoogleSignIn,
+    sessionService: resolvedSession,
+    operatorService: resolvedOperator,
+    operatorBootstrapController: resolvedBootstrap,
     authenticationController: resolvedAuthController,
+    clock: resolvedClock,
   );
 }
 
@@ -135,7 +214,9 @@ final class RecordingAppLogger implements AppLogger {
       if (text.contains('bearer secret-token') ||
           text.contains('super-secret-password') ||
           text.contains('id_token_value') ||
-          text.contains('fake-google-id-token')) {
+          text.contains('fake-google-id-token') ||
+          text.contains('test-session-token') ||
+          text.contains('authorization: bearer')) {
         return true;
       }
     }
@@ -214,6 +295,116 @@ final class FakeGoogleSignInService implements GoogleSignInService {
   }
 }
 
+final class FakeSessionService
+    implements SessionService, SessionCredentialProvider {
+  FakeSessionService({
+    required this.clock,
+    this.session,
+    this.createError,
+    this.restoreResult,
+  });
+
+  final Clock clock;
+  Session? session;
+  Object? createError;
+  Session? restoreResult;
+  var createCallCount = 0;
+  var clearCallCount = 0;
+  GoogleAuthenticationResult? lastGoogleResult;
+  String? lastTenantId;
+
+  @override
+  Session? get currentSession {
+    final current = session;
+    if (current == null) {
+      return null;
+    }
+    if (current.isExpiredAt(clock.now())) {
+      return null;
+    }
+    return current;
+  }
+
+  @override
+  bool get hasValidSession => currentSession != null;
+
+  @override
+  Future<String?> authorizationHeader() async {
+    final current = currentSession;
+    return current?.authorizationHeader;
+  }
+
+  @override
+  Future<Session> createSession({
+    required GoogleAuthenticationResult googleResult,
+    required String tenantId,
+  }) async {
+    createCallCount += 1;
+    lastGoogleResult = googleResult;
+    lastTenantId = tenantId;
+    final failure = createError;
+    if (failure != null) {
+      if (failure is Exception) {
+        throw failure;
+      }
+      throw Exception('$failure');
+    }
+    final created =
+        session ??
+        fakeSession(
+          issuedAt: clock.now(),
+          expiresAt: clock.now().add(const Duration(hours: 1)),
+        );
+    session = created;
+    return created;
+  }
+
+  @override
+  Future<Session?> restoreSession() async {
+    if (restoreResult != null) {
+      session = restoreResult;
+      return restoreResult;
+    }
+    final current = session;
+    if (current == null || current.isExpiredAt(clock.now())) {
+      session = null;
+      return null;
+    }
+    return current;
+  }
+
+  @override
+  Future<void> clearSession() async {
+    clearCallCount += 1;
+    session = null;
+  }
+}
+
+final class FakeOperatorService implements OperatorService {
+  FakeOperatorService({this.operator, this.error, this.delay = Duration.zero});
+
+  Operator? operator;
+  Object? error;
+  Duration delay;
+  var callCount = 0;
+
+  @override
+  Future<Operator> getCurrentOperator() async {
+    callCount += 1;
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
+    final failure = error;
+    if (failure != null) {
+      if (failure is Exception) {
+        throw failure;
+      }
+      throw Exception('$failure');
+    }
+    return operator ?? fakeOperator();
+  }
+}
+
 final class _UnusedApiClient implements ApiClient {
   Never _unused() => throw StateError('ApiClient was not provided to the test');
 
@@ -226,6 +417,7 @@ final class _UnusedApiClient implements ApiClient {
     Map<String, String>? headers,
     Map<String, String>? queryParameters,
     String? requestId,
+    bool authenticated = false,
   }) async => _unused();
 
   @override
@@ -235,6 +427,7 @@ final class _UnusedApiClient implements ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   }) async => _unused();
 
   @override
@@ -244,6 +437,7 @@ final class _UnusedApiClient implements ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   }) async => _unused();
 
   @override
@@ -253,6 +447,7 @@ final class _UnusedApiClient implements ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   }) async => _unused();
 
   @override
@@ -262,5 +457,6 @@ final class _UnusedApiClient implements ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   }) async => _unused();
 }

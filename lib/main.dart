@@ -4,7 +4,7 @@ import 'app/app.dart';
 import 'app/bootstrap/app_dependencies.dart';
 import 'core/config/app_config.dart';
 
-void main() {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   final config = AppConfig(
@@ -15,12 +15,17 @@ void main() {
       'API_BASE_URL',
       defaultValue: 'http://localhost:8080',
     ),
+    tenantId: const String.fromEnvironment(
+      'TENANT_ID',
+      defaultValue: 'tenant-a',
+    ),
     httpTimeout: const Duration(
       milliseconds: int.fromEnvironment('HTTP_TIMEOUT_MS', defaultValue: 30000),
     ),
   );
 
   final dependencies = AppDependencies.create(config);
+  await dependencies.authenticationController.restoreSession();
   runApp(VendingApp(dependencies: dependencies));
 }
 

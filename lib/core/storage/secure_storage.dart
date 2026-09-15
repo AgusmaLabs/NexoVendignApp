@@ -12,10 +12,9 @@ abstract interface class SecureStorage {
   Future<void> clear();
 }
 
-/// In-memory [SecureStorage] for tests and pre-auth composition.
+/// In-memory [SecureStorage] for tests only.
 ///
-/// Not suitable for production secrets. Platform-backed storage will replace
-/// this when session persistence is implemented.
+/// Production composition uses [FlutterSecureStorageAdapter].
 final class MemorySecureStorage implements SecureStorage {
   final Map<String, String> _values = <String, String>{};
 

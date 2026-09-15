@@ -4,7 +4,7 @@ import '../../../app/bootstrap/app_dependencies.dart';
 import '../application/authentication_controller.dart';
 import '../application/authentication_state.dart';
 
-/// Minimal Google Sign-In screen. Never displays or logs `id_token`.
+/// Google Sign-In + NexoVending session screen. Never displays tokens.
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key, this.controller});
 
@@ -26,7 +26,7 @@ class LoginPage extends StatelessWidget {
               listenable: authController,
               builder: (context, _) {
                 final state = authController.state;
-                final isLoading = state is Authenticating;
+                final isLoading = authController.isBusy;
 
                 return Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -46,7 +46,10 @@ class LoginPage extends StatelessWidget {
                     if (isLoading) ...[
                       const CircularProgressIndicator(),
                       const SizedBox(height: 16),
-                      Text('Authenticating', style: theme.textTheme.bodyMedium),
+                      Text(
+                        _loadingLabel(state),
+                        style: theme.textTheme.bodyMedium,
+                      ),
                       const SizedBox(height: 24),
                     ],
                     FilledButton(
@@ -65,29 +68,28 @@ class LoginPage extends StatelessWidget {
     );
   }
 
+  String _loadingLabel(AuthenticationState state) {
+    return switch (state) {
+      RestoringSession() => 'Restaurando sesión...',
+      CreatingSession() => 'Iniciando sesión...',
+      Authenticating() => 'Authenticating',
+      _ => 'Cargando...',
+    };
+  }
+
   List<Widget> _statusWidgets(ThemeData theme, AuthenticationState state) {
     return switch (state) {
-      Authenticated(:final result) => [
+      Authenticated() => const <Widget>[],
+      SessionExpired() => [
         Text(
-          'Autenticado con Google',
-          style: theme.textTheme.titleMedium,
-          textAlign: TextAlign.center,
-        ),
-        if (result.email != null) ...[
-          const SizedBox(height: 8),
-          Text(
-            result.email!,
-            style: theme.textTheme.bodyMedium,
-            textAlign: TextAlign.center,
+          'La sesión ha expirado. Vuelve a iniciar sesión.',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: theme.colorScheme.error,
           ),
-        ],
-        const SizedBox(height: 8),
-        Text(
-          'Sesión NexoVending pendiente (Commit 4).',
-          style: theme.textTheme.bodySmall,
           textAlign: TextAlign.center,
         ),
       ],
+      SessionFailure(:final message) ||
       AuthenticationFailure(:final message) => [
         Text(
           message,
@@ -97,7 +99,10 @@ class LoginPage extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
       ],
-      Unauthenticated() || Authenticating() => const <Widget>[],
+      Unauthenticated() ||
+      Authenticating() ||
+      CreatingSession() ||
+      RestoringSession() => const <Widget>[],
     };
   }
 }

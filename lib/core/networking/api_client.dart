@@ -4,6 +4,8 @@ import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
+import '../authentication/session_credential_provider.dart';
+import '../authentication/session_exception.dart';
 import '../config/app_config.dart';
 import '../logging/app_logger.dart';
 import 'api_exception.dart';
@@ -20,6 +22,7 @@ abstract interface class ApiClient {
     Map<String, String>? headers,
     Map<String, String>? queryParameters,
     String? requestId,
+    bool authenticated = false,
   });
 
   Future<ApiResponse> post(
@@ -28,6 +31,7 @@ abstract interface class ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   });
 
   Future<ApiResponse> put(
@@ -36,6 +40,7 @@ abstract interface class ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   });
 
   Future<ApiResponse> patch(
@@ -44,6 +49,7 @@ abstract interface class ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   });
 
   Future<ApiResponse> delete(
@@ -52,6 +58,7 @@ abstract interface class ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   });
 }
 
@@ -61,15 +68,18 @@ final class HttpApiClient implements ApiClient {
     required this.config,
     required this.logger,
     required this.requestIdGenerator,
+    this.credentialProvider,
     http.Client? httpClient,
   }) : _httpClient = httpClient ?? http.Client(),
        _ownsClient = httpClient == null;
 
   static const String requestIdHeader = 'X-Request-Id';
+  static const String authorizationHeader = 'Authorization';
 
   final AppConfig config;
   final AppLogger logger;
   final RequestIdGenerator requestIdGenerator;
+  final SessionCredentialProvider? credentialProvider;
   final http.Client _httpClient;
   final bool _ownsClient;
 
@@ -85,6 +95,7 @@ final class HttpApiClient implements ApiClient {
     Map<String, String>? headers,
     Map<String, String>? queryParameters,
     String? requestId,
+    bool authenticated = false,
   }) {
     return send(
       ApiRequest(
@@ -93,6 +104,7 @@ final class HttpApiClient implements ApiClient {
         headers: headers ?? const {},
         queryParameters: queryParameters ?? const {},
         requestId: requestId,
+        authenticated: authenticated,
       ),
     );
   }
@@ -104,6 +116,7 @@ final class HttpApiClient implements ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   }) {
     return send(
       ApiRequest(
@@ -113,6 +126,7 @@ final class HttpApiClient implements ApiClient {
         queryParameters: queryParameters ?? const {},
         body: body,
         requestId: requestId,
+        authenticated: authenticated,
       ),
     );
   }
@@ -124,6 +138,7 @@ final class HttpApiClient implements ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   }) {
     return send(
       ApiRequest(
@@ -133,6 +148,7 @@ final class HttpApiClient implements ApiClient {
         queryParameters: queryParameters ?? const {},
         body: body,
         requestId: requestId,
+        authenticated: authenticated,
       ),
     );
   }
@@ -144,6 +160,7 @@ final class HttpApiClient implements ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   }) {
     return send(
       ApiRequest(
@@ -153,6 +170,7 @@ final class HttpApiClient implements ApiClient {
         queryParameters: queryParameters ?? const {},
         body: body,
         requestId: requestId,
+        authenticated: authenticated,
       ),
     );
   }
@@ -164,6 +182,7 @@ final class HttpApiClient implements ApiClient {
     Map<String, String>? queryParameters,
     Object? body,
     String? requestId,
+    bool authenticated = false,
   }) {
     return send(
       ApiRequest(
@@ -173,6 +192,7 @@ final class HttpApiClient implements ApiClient {
         queryParameters: queryParameters ?? const {},
         body: body,
         requestId: requestId,
+        authenticated: authenticated,
       ),
     );
   }
@@ -189,6 +209,22 @@ final class HttpApiClient implements ApiClient {
       ...request.headers,
       requestIdHeader: requestId,
     };
+
+    if (request.authenticated) {
+      final provider = credentialProvider;
+      if (provider == null) {
+        throw const SessionExpiredException(
+          message:
+              'Authenticated request requires a session credential provider.',
+        );
+      }
+      final authorization = await provider.authorizationHeader();
+      if (authorization == null || authorization.trim().isEmpty) {
+        throw const SessionExpiredException();
+      }
+      // Do not overwrite an explicit Authorization already supplied by tests.
+      headers.putIfAbsent(authorizationHeader, () => authorization);
+    }
 
     final encodedBody = _encodeBody(request.body, headers, requestId);
     final stopwatch = Stopwatch()..start();

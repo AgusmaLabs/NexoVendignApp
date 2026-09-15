@@ -10,10 +10,14 @@ final class AppConfig {
   AppConfig({
     required this.environment,
     required this.apiBaseUrl,
+    required this.tenantId,
     this.httpTimeout = const Duration(seconds: 30),
   }) {
     if (apiBaseUrl.trim().isEmpty) {
       throw ArgumentError.value(apiBaseUrl, 'apiBaseUrl', 'must not be empty');
+    }
+    if (tenantId.trim().isEmpty) {
+      throw ArgumentError.value(tenantId, 'tenantId', 'must not be empty');
     }
     if (httpTimeout <= Duration.zero) {
       throw ArgumentError.value(
@@ -26,6 +30,12 @@ final class AppConfig {
 
   final AppEnvironment environment;
   final String apiBaseUrl;
+
+  /// Tenant used only when creating a session (`POST /auth/session`).
+  ///
+  /// After the session JWT is issued, tenant authority comes from the token —
+  /// not from this config field on business calls.
+  final String tenantId;
   final Duration httpTimeout;
 }
 
@@ -45,6 +55,7 @@ final class AppConfigScope extends InheritedWidget {
   bool updateShouldNotify(AppConfigScope oldWidget) {
     return config.environment != oldWidget.config.environment ||
         config.apiBaseUrl != oldWidget.config.apiBaseUrl ||
+        config.tenantId != oldWidget.config.tenantId ||
         config.httpTimeout != oldWidget.config.httpTimeout;
   }
 }

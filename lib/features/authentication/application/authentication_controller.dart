@@ -2,30 +2,62 @@ import 'package:flutter/foundation.dart';
 
 import '../../../core/authentication/authentication_exception.dart';
 import '../../../core/authentication/google_sign_in_service.dart';
+import '../../../core/authentication/session_exception.dart';
+import '../../../core/authentication/session_service.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/logging/app_logger.dart';
 import 'authentication_state.dart';
 
-/// Coordinates Google Sign-In for the UI without contacting NexoVending.
-///
-/// The Google `id_token` remains in memory only for Commit 3. It is never
-/// written to LocalStorage or SecureStorage here.
+/// Coordinates Google Sign-In and NexoVending session creation.
 final class AuthenticationController extends ChangeNotifier {
   AuthenticationController({
     required this.googleSignInService,
+    required this.sessionService,
+    required this.config,
     required this.logger,
+    this.afterSessionEstablished,
+    this.afterSessionCleared,
   });
 
   final GoogleSignInService googleSignInService;
+  final SessionService sessionService;
+  final AppConfig config;
   final AppLogger logger;
+
+  /// Invoked after a valid session is created or restored (operator bootstrap).
+  Future<void> Function()? afterSessionEstablished;
+
+  /// Invoked after local session is cleared (logout / expiry).
+  Future<void> Function()? afterSessionCleared;
 
   AuthenticationState _state = const Unauthenticated();
 
   AuthenticationState get state => _state;
 
-  bool get isAuthenticating => _state is Authenticating;
+  bool get isBusy =>
+      _state is Authenticating ||
+      _state is CreatingSession ||
+      _state is RestoringSession;
+
+  /// Restore a persisted session at app startup.
+  Future<void> restoreSession() async {
+    if (_state is RestoringSession) {
+      return;
+    }
+    _setState(const RestoringSession());
+    logger.info('session_restore_ui_started');
+
+    final session = await sessionService.restoreSession();
+    if (session == null) {
+      _setState(const Unauthenticated());
+      return;
+    }
+    _setState(Authenticated(session));
+    await afterSessionEstablished?.call();
+  }
 
   Future<void> signIn() async {
-    if (_state is Authenticating) {
+    if (isBusy) {
       return;
     }
 
@@ -33,8 +65,16 @@ final class AuthenticationController extends ChangeNotifier {
     logger.info('authentication_started');
 
     try {
-      final result = await googleSignInService.signIn();
-      _setState(Authenticated(result));
+      final googleResult = await googleSignInService.signIn();
+      _setState(const CreatingSession());
+      logger.info('session_exchange_started');
+
+      final session = await sessionService.createSession(
+        googleResult: googleResult,
+        tenantId: config.tenantId,
+      );
+      _setState(Authenticated(session));
+      await afterSessionEstablished?.call();
     } on AuthenticationCancelled {
       logger.info('authentication_cancelled');
       _setState(const Unauthenticated());
@@ -44,7 +84,18 @@ final class AuthenticationController extends ChangeNotifier {
         error: error,
         context: {'type': error.runtimeType.toString()},
       );
-      _setState(AuthenticationFailure(_userMessage(error)));
+      _setState(AuthenticationFailure(_googleMessage(error)));
+    } on SessionExpiredException {
+      await sessionService.clearSession();
+      await afterSessionCleared?.call();
+      _setState(const SessionExpired());
+    } on SessionException catch (error) {
+      logger.error(
+        'session_failed',
+        error: error,
+        context: {'type': error.runtimeType.toString()},
+      );
+      _setState(SessionFailure(_sessionMessage(error)));
     } catch (error, stackTrace) {
       logger.error(
         'authentication_failed',
@@ -60,8 +111,16 @@ final class AuthenticationController extends ChangeNotifier {
   }
 
   Future<void> signOut() async {
-    await googleSignInService.signOut();
+    await sessionService.clearSession();
+    await afterSessionCleared?.call();
     _setState(const Unauthenticated());
+  }
+
+  /// Called when a protected API reports session expiry (e.g. `/operators/me` 401).
+  Future<void> handleSessionExpired() async {
+    await sessionService.clearSession();
+    await afterSessionCleared?.call();
+    _setState(const SessionExpired());
   }
 
   void _setState(AuthenticationState next) {
@@ -69,7 +128,7 @@ final class AuthenticationController extends ChangeNotifier {
     notifyListeners();
   }
 
-  String _userMessage(AuthenticationException error) {
+  String _googleMessage(AuthenticationException error) {
     return switch (error) {
       AuthenticationCancelled() =>
         'Inicio de sesión cancelado. Puedes intentarlo de nuevo.',
@@ -77,6 +136,17 @@ final class AuthenticationController extends ChangeNotifier {
         'Google Sign-In no está disponible en este dispositivo.',
       AuthenticationFailed() || AuthenticationUnknownError() =>
         'No se pudo iniciar sesión con Google. Inténtalo de nuevo.',
+    };
+  }
+
+  String _sessionMessage(SessionException error) {
+    return switch (error) {
+      SessionAuthenticationFailed() => error.message,
+      SessionAccessDenied() => error.message,
+      SessionNetworkFailure() => error.message,
+      SessionInvalidResponse() => error.message,
+      SessionExpiredException() => error.message,
+      SessionUnknownError() => error.message,
     };
   }
 }

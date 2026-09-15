@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../features/authentication/presentation/login_page.dart';
-import '../home/initial_page.dart';
+import '../../features/authentication/presentation/auth_gate.dart';
 import '../home/unknown_route_page.dart';
 
 /// Centralized navigation for VendingApp.
@@ -15,14 +14,10 @@ abstract final class AppRouter {
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
       case homePath:
-        return MaterialPageRoute<void>(
-          settings: settings,
-          builder: (_) => const InitialPage(),
-        );
       case loginPath:
         return MaterialPageRoute<void>(
           settings: settings,
-          builder: (_) => const LoginPage(),
+          builder: (_) => const AuthGate(),
         );
       default:
         return MaterialPageRoute<void>(

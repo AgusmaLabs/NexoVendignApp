@@ -2,7 +2,10 @@ import 'package:flutter/widgets.dart';
 
 import '../../core/authentication/google_sign_in_config.dart';
 import '../../core/authentication/google_sign_in_service.dart';
+import '../../core/authentication/http_session_service.dart';
 import '../../core/authentication/sdk_google_sign_in_service.dart';
+import '../../core/authentication/session_credential_provider.dart';
+import '../../core/authentication/session_service.dart';
 import '../../core/config/app_config.dart';
 import '../../core/device/barcode_scanner.dart';
 import '../../core/device/connectivity_service.dart';
@@ -10,9 +13,14 @@ import '../../core/device/location_service.dart';
 import '../../core/logging/app_logger.dart';
 import '../../core/networking/api_client.dart';
 import '../../core/networking/request_id.dart';
+import '../../core/storage/flutter_secure_storage_adapter.dart';
 import '../../core/storage/local_storage.dart';
 import '../../core/storage/secure_storage.dart';
+import '../../core/time/clock.dart';
 import '../../features/authentication/application/authentication_controller.dart';
+import '../../features/operator/application/operator_bootstrap_controller.dart';
+import '../../features/operator/data/api_operator_service.dart';
+import '../../features/operator/domain/operator_service.dart';
 
 /// Composition root for VendingApp infrastructure dependencies.
 ///
@@ -31,7 +39,11 @@ final class AppDependencies {
     required this.locationService,
     required this.barcodeScanner,
     required this.googleSignInService,
+    required this.sessionService,
+    required this.operatorService,
+    required this.operatorBootstrapController,
     required this.authenticationController,
+    required this.clock,
   });
 
   final AppConfig config;
@@ -45,7 +57,11 @@ final class AppDependencies {
   final LocationService locationService;
   final BarcodeScanner barcodeScanner;
   final GoogleSignInService googleSignInService;
+  final SessionService sessionService;
+  final OperatorService operatorService;
+  final OperatorBootstrapController operatorBootstrapController;
   final AuthenticationController authenticationController;
+  final Clock clock;
 
   /// Builds the default production/development dependency graph.
   factory AppDependencies.create(AppConfig config) {
@@ -55,11 +71,36 @@ final class AppDependencies {
           : LogLevel.debug,
     );
     final requestIdGenerator = UuidRequestIdGenerator();
+    const clock = SystemClock();
+    final secureStorage = FlutterSecureStorageAdapter();
+    final credentialProvider = DelegatingSessionCredentialProvider();
     final apiClient = HttpApiClient(
       config: config,
       logger: logger,
       requestIdGenerator: requestIdGenerator,
+      credentialProvider: credentialProvider,
     );
+    final sessionService = HttpSessionService(
+      apiClient: apiClient,
+      secureStorage: secureStorage,
+      logger: logger,
+      clock: clock,
+    );
+    credentialProvider.delegate = sessionService;
+
+    final operatorService = ApiOperatorService(
+      apiClient: apiClient,
+      logger: logger,
+    );
+
+    late final AuthenticationController authenticationController;
+    final operatorBootstrapController = OperatorBootstrapController(
+      operatorService: operatorService,
+      sessionService: sessionService,
+      logger: logger,
+      onSessionExpired: () => authenticationController.handleSessionExpired(),
+    );
+
     final googleSignInConfig = GoogleSignInConfig.fromEnvironment(
       config.environment,
     );
@@ -67,9 +108,13 @@ final class AppDependencies {
       config: googleSignInConfig,
       logger: logger,
     );
-    final authenticationController = AuthenticationController(
+    authenticationController = AuthenticationController(
       googleSignInService: googleSignInService,
+      sessionService: sessionService,
+      config: config,
       logger: logger,
+      afterSessionEstablished: operatorBootstrapController.load,
+      afterSessionCleared: operatorBootstrapController.clear,
     );
 
     return AppDependencies(
@@ -77,14 +122,18 @@ final class AppDependencies {
       googleSignInConfig: googleSignInConfig,
       logger: logger,
       localStorage: MemoryLocalStorage(),
-      secureStorage: MemorySecureStorage(),
+      secureStorage: secureStorage,
       apiClient: apiClient,
       requestIdGenerator: requestIdGenerator,
       connectivityService: const UnsupportedConnectivityService(),
       locationService: const UnsupportedLocationService(),
       barcodeScanner: const UnsupportedBarcodeScanner(),
       googleSignInService: googleSignInService,
+      sessionService: sessionService,
+      operatorService: operatorService,
+      operatorBootstrapController: operatorBootstrapController,
       authenticationController: authenticationController,
+      clock: clock,
     );
   }
 }

@@ -28,11 +28,17 @@ Responsibilities:
 * mapping transport/HTTP failures into application exceptions;
 * structured logging of method, endpoint, status, request ID, and duration.
 
+Responsibilities added in Commit 4:
+
+* optional `authenticated: true` on requests;
+* `Authorization: Bearer <session-jwt>` via `SessionCredentialProvider`
+  (typically `HttpSessionService`).
+
 Non-responsibilities:
 
-* authentication / session JWT attachment;
+* creating or validating sessions (owned by `SessionService`);
 * authorization decisions;
-* tenant selection;
+* tenant selection for business calls;
 * vending business rules;
 * inventory rules;
 * NexoVending DTO/domain models.
@@ -67,9 +73,9 @@ Package-specific HTTP errors must not leak into features.
 
 * Access tokens, passwords, and `id_token` values must never be logged.
 * `sanitizeLogContext` strips sensitive keys from logger context maps.
-* `SecureStorage` is prepared for later session persistence; Commit 2 does not
-  store authentication material.
-* Authorization headers are intentionally not attached yet.
+* Session JWT is persisted only via `SecureStorage` (see [SESSION.md](SESSION.md)).
+* Unauthenticated requests do not attach `Authorization`.
+* Authenticated requests attach Bearer via `SessionCredentialProvider`.
 
 ## Configuration
 
@@ -77,5 +83,6 @@ Package-specific HTTP errors must not leak into features.
 flutter run \
   --dart-define=APP_ENV=development \
   --dart-define=API_BASE_URL=http://localhost:8080 \
-  --dart-define=HTTP_TIMEOUT_MS=30000
+  --dart-define=HTTP_TIMEOUT_MS=30000 \
+  --dart-define=TENANT_ID=tenant-a
 ```

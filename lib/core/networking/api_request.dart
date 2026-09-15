@@ -10,6 +10,7 @@ final class ApiRequest {
     this.queryParameters = const {},
     this.body,
     this.requestId,
+    this.authenticated = false,
   });
 
   final ApiHttpMethod method;
@@ -22,4 +23,8 @@ final class ApiRequest {
 
   /// Optional caller-supplied request ID. When null, the client generates one.
   final String? requestId;
+
+  /// When true, [HttpApiClient] attaches `Authorization` from
+  /// [SessionCredentialProvider] (never log the header value).
+  final bool authenticated;
 }

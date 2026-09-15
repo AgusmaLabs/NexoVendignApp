@@ -6,6 +6,7 @@ import 'package:http/testing.dart';
 import 'package:vendingapp/core/networking/api_client.dart';
 import 'package:vendingapp/core/networking/api_exception.dart';
 import 'package:vendingapp/core/networking/request_id.dart';
+import 'package:vendingapp/core/time/clock.dart';
 
 import '../../support/test_doubles.dart';
 
@@ -181,14 +182,65 @@ void main() {
     });
 
     test('decodeJson maps invalid body to SerializationException', () async {
-      final client = buildClient(
+      final response = await buildClient(
         httpClient: MockClient((request) async {
           return http.Response('not-json', 200);
         }),
+      ).get('/raw');
+      expect(response.decodeJson, throwsA(isA<SerializationException>()));
+    });
+
+    test(
+      'authenticated request attaches Bearer from SessionCredentialProvider',
+      () async {
+        late http.Request captured;
+        final clock = FakeClock(DateTime.utc(2026, 9, 15, 12));
+        final sessions = FakeSessionService(
+          clock: clock,
+          session: fakeSession(
+            accessToken: 'test-session-token',
+            issuedAt: clock.now(),
+          ),
+        );
+        final client = HttpApiClient(
+          config: testConfig(),
+          logger: logger,
+          requestIdGenerator: requestIds,
+          credentialProvider: sessions,
+          httpClient: MockClient((request) async {
+            captured = request;
+            return http.Response('{}', 200);
+          }),
+        );
+
+        await client.get('/secure', authenticated: true);
+
+        expect(captured.headers['authorization'], 'Bearer test-session-token');
+        expect(logger.hasSensitiveLeak, isFalse);
+      },
+    );
+
+    test('unauthenticated request does not attach Authorization', () async {
+      late http.Request captured;
+      final clock = FakeClock(DateTime.utc(2026, 9, 15, 12));
+      final sessions = FakeSessionService(
+        clock: clock,
+        session: fakeSession(issuedAt: clock.now()),
+      );
+      final client = HttpApiClient(
+        config: testConfig(),
+        logger: logger,
+        requestIdGenerator: requestIds,
+        credentialProvider: sessions,
+        httpClient: MockClient((request) async {
+          captured = request;
+          return http.Response('{}', 200);
+        }),
       );
 
-      final response = await client.get('/raw');
-      expect(response.decodeJson, throwsA(isA<SerializationException>()));
+      await client.get('/public', authenticated: false);
+
+      expect(captured.headers.containsKey('authorization'), isFalse);
     });
 
     test('UuidRequestIdGenerator produces unique ids', () {

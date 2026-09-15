@@ -42,6 +42,7 @@ void main() {
         config: AppConfig(
           environment: AppEnvironment.staging,
           apiBaseUrl: 'https://staging.example.com',
+          tenantId: 'tenant-staging',
         ),
       );
 

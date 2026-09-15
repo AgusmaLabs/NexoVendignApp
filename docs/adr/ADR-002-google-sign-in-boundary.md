@@ -34,16 +34,17 @@ Google Sign-In
 Google account
     ↓
 id_token
-
-## Next Step
-
-Commit 4 implementará:
-
-id_token
     ↓
 POST /api/v1/auth/session
     ↓
 NexoVending Session JWT
+    ↓
+SecureStorage
+
+## Next Step
+
+Field operations (machines, replenishments) consume the resolved Operator
+context; authorization remains on NexoVending.
 
 ## Consequences
 

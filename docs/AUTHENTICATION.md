@@ -1,99 +1,68 @@
 # VendingApp Authentication
 
-## Current flow (Commit 3)
+## Current flow (Commit 5)
 
 ```text
-┌──────────────┐
-│   VendingApp │
-└──────┬───────┘
-       │
-       │ Google Sign-In
-       ▼
-┌──────────────┐
-│    Google    │
-└──────┬───────┘
-       │
-       │ id_token
-       ▼
-┌──────────────────────┐
-│ Authentication layer │
-│      VendingApp      │
-└──────────────────────┘
-```
-
-`Authenticated` means Google produced an `id_token` in memory. It does **not**
-mean VendingApp holds a NexoVending session JWT.
-
-## Not implemented yet (Commit 4)
-
-```text
+Google Sign-In
+      ↓
 id_token
-   ↓
-POST /api/v1/auth/session
-   ↓
+      ↓
+NexoVending /auth/session
+      ↓
 Session JWT
-   ↓
+      ↓
 SecureStorage
+      ↓
+GET /operators/me
+      ↓
+Vending Operator
+      ↓
+Application shell
 ```
+
+| Commit | Meaning |
+| ------ | ------- |
+| Commit 3 | Google identity (`id_token` in memory) |
+| Commit 4 | NexoVending session (Session JWT + SecureStorage) |
+| Commit 5 | Operator bootstrap (`/operators/me`) |
+
+`Authenticated` means a non-expired Session JWT exists. The operational shell
+requires a successful operator bootstrap (`OperatorBootstrapLoaded`).
 
 ## Architecture
 
 * `GoogleSignInService` isolates the official `google_sign_in` SDK.
-* `AuthenticationController` owns UI state:
-  `Unauthenticated` → `Authenticating` → `Authenticated` / `AuthenticationFailure`.
-* Cancellation returns to `Unauthenticated` (not treated as an unexpected error).
-* UI never displays the `id_token`.
+* `SessionService` exchanges `id_token` + `tenant_id` for a Session JWT.
+* `OperatorService` loads the Vending operator via authenticated ApiClient.
+* `AuthGate` routes: login → bootstrap → welcome shell.
+* UI never displays `id_token` or Session JWT values.
 
 ## Configuration
-
-Client IDs are supplied at build time (never committed):
 
 ```bash
 flutter run \
   --dart-define=GOOGLE_SERVER_CLIENT_ID=your-web-client-id.apps.googleusercontent.com \
-  --dart-define=GOOGLE_IOS_CLIENT_ID=your-ios-client-id.apps.googleusercontent.com
+  --dart-define=GOOGLE_IOS_CLIENT_ID=your-ios-client-id.apps.googleusercontent.com \
+  --dart-define=API_BASE_URL=http://localhost:8080 \
+  --dart-define=TENANT_ID=tenant-a
 ```
 
-| Define | Purpose |
-| ------ | ------- |
-| `GOOGLE_SERVER_CLIENT_ID` | Web/server OAuth client ID (required for `id_token` on Android) |
-| `GOOGLE_IOS_CLIENT_ID` | iOS OAuth client ID |
-
-### Android
-
-1. Register the Android app package (`com.example.vendingapp` until renamed) in Google Cloud / Firebase.
-2. Add the SHA-1 of each signing keystore used for debug/release.
-3. Create a **Web** OAuth client and pass it as `GOOGLE_SERVER_CLIENT_ID`.
-4. Do **not** commit `google-services.json` if you use Firebase downloadables.
-
-`INTERNET` permission is declared in `android/app/src/main/AndroidManifest.xml`.
-
-### iOS
-
-1. Register the iOS bundle ID in Google Cloud / Firebase.
-2. Pass the iOS client ID as `GOOGLE_IOS_CLIENT_ID` (Dart initialization).
-3. Replace `com.googleusercontent.apps.REPLACE_ME` in `ios/Runner/Info.plist`
-   (`CFBundleURLSchemes`) with the real `REVERSED_CLIENT_ID`.
-4. Do **not** commit `GoogleService-Info.plist`.
+See platform setup details in prior sections of this document and
+[SESSION.md](SESSION.md) / [OPERATOR_BOOTSTRAP.md](OPERATOR_BOOTSTRAP.md).
 
 ## Security
 
-* Never log `id_token`, access tokens, or authorization headers.
-* Commit 3 keeps the Google `id_token` in memory only.
-* Do not write the Google `id_token` to `LocalStorage` or `SecureStorage`.
-* Secure storage is reserved for the NexoVending Session JWT in Commit 4.
-
-## Testing
-
-Automated tests use `FakeGoogleSignInService`. They never call real Google
-accounts or NexoVending.
-
-```bash
-flutter test
-```
+* Never log `id_token`, Session JWT, or authorization headers.
+* Do not write the Google `id_token` to storage.
+* Persist only the NexoVending Session JWT via `SecureStorage`.
+* Operator context is not authority for authorization.
 
 ## Related
 
-* [ADR-002: Google Sign-In Boundary](adr/ADR-002-google-sign-in-boundary.md)
+* [SESSION.md](SESSION.md)
+* [OPERATOR_BOOTSTRAP.md](OPERATOR_BOOTSTRAP.md)
+* [ADR-002](adr/ADR-002-google-sign-in-boundary.md)
+* [ADR-003](adr/ADR-003-session-token-storage.md)
+* [ADR-004](adr/ADR-004-operator-bootstrap.md)
 * [Networking](NETWORKING.md)
-* [Architecture](ARCHITECTURE.md)
+* [Architecture](architecture.md)
