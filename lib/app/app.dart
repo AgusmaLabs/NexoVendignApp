@@ -24,7 +24,7 @@ class VendingApp extends StatelessWidget {
         child: MaterialApp(
           title: 'VendingApp',
           theme: AppTheme.light(),
-          initialRoute: AppRouter.homePath,
+          initialRoute: AppRouter.loginPath,
           onGenerateRoute: AppRouter.onGenerateRoute,
         ),
       ),

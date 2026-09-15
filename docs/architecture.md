@@ -1,6 +1,6 @@
 # VendingApp Architecture
 
-**Status:** Application infrastructure (Commit 2)
+**Status:** Google authentication foundation (Commit 3)
 **Client:** Flutter
 **Backend:** NexoVending public HTTP API
 
@@ -58,6 +58,7 @@ VendingApp
 │   └── theme/
 │
 ├── core/
+│   ├── authentication/
 │   ├── config/
 │   ├── networking/
 │   ├── errors/
@@ -66,7 +67,7 @@ VendingApp
 │   └── device/
 │
 └── features/
-    └── future
+    └── authentication/
 ```
 
 ```text
@@ -78,16 +79,33 @@ lib/
 │   ├── theme/
 │   └── app.dart
 ├── core/
+│   ├── authentication/
 │   ├── config/
 │   ├── networking/
 │   ├── errors/
 │   ├── logging/
 │   ├── storage/
 │   └── device/
+├── features/
+│   └── authentication/
+│       ├── application/
+│       └── presentation/
 └── main.dart
 ```
 
-Feature modules are intentionally absent until later commits.
+## Authentication (Commit 3)
+
+```text
+Login UI
+  → AuthenticationController
+  → GoogleSignInService
+  → Google Sign-In SDK
+  → id_token (memory only)
+```
+
+* Official dependency: `google_sign_in`.
+* `Authenticated` means Google identity only — **not** a NexoVending session.
+* `POST /api/v1/auth/session` is intentionally not implemented yet.
 
 ## Infrastructure
 
@@ -100,19 +118,20 @@ Feature modules are intentionally absent until later commits.
 
 ## Configuration
 
-`AppConfig` holds `environment`, `apiBaseUrl`, and `httpTimeout`. Values are
-supplied at bootstrap (for example via `--dart-define`) and exposed through
-`AppConfigScope` / `AppDependenciesScope`.
+`AppConfig` holds `environment`, `apiBaseUrl`, and `httpTimeout`.
+`GoogleSignInConfig` holds Google client IDs via `--dart-define`.
 
 ## Navigation and theme
 
-* `AppRouter` owns named routes. The initial route is `/`.
+* `AppRouter` owns named routes. The initial route is `/login`.
 * `AppTheme` owns the global `ThemeData`. Features must not create a second
   global theme.
 
 ## Related documents
 
+* [Authentication](AUTHENTICATION.md)
 * [Networking](NETWORKING.md)
 * [ADR-001: VendingApp API Boundary](adr/ADR-001-vendingapp-api-boundary.md)
+* [ADR-002: Google Sign-In Boundary](adr/ADR-002-google-sign-in-boundary.md)
 * [Architecture plan (pre-implementation)](architecture-plan.md)
 * [Product requirements](PRD.md)

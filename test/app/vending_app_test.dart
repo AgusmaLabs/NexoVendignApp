@@ -2,22 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vendingapp/app/app.dart';
 import 'package:vendingapp/app/bootstrap/app_dependencies.dart';
-import 'package:vendingapp/app/home/initial_page.dart';
 import 'package:vendingapp/app/theme/app_theme.dart';
 import 'package:vendingapp/core/config/app_config.dart';
+import 'package:vendingapp/features/authentication/presentation/login_page.dart';
 
 import '../support/test_doubles.dart';
 
 void main() {
   group('VendingApp', () {
-    testWidgets('can be constructed and starts on the initial route', (
+    testWidgets('can be constructed and starts on the login route', (
       tester,
     ) async {
       await tester.pumpWidget(VendingApp(dependencies: testDependencies()));
       await tester.pumpAndSettle();
 
       expect(find.byType(VendingApp), findsOneWidget);
-      expect(find.byType(InitialPage), findsOneWidget);
+      expect(find.byType(LoginPage), findsOneWidget);
       expect(find.byType(MaterialApp), findsOneWidget);
     });
 
@@ -48,16 +48,14 @@ void main() {
       await tester.pumpWidget(VendingApp(dependencies: dependencies));
       await tester.pumpAndSettle();
 
-      expect(find.text('Environment: staging'), findsOneWidget);
-
       final scopedConfig = AppConfigScope.of(
-        tester.element(find.byType(InitialPage)),
+        tester.element(find.byType(LoginPage)),
       );
       expect(scopedConfig.apiBaseUrl, 'https://staging.example.com');
       expect(scopedConfig.environment, AppEnvironment.staging);
 
       final scopedDeps = AppDependenciesScope.of(
-        tester.element(find.byType(InitialPage)),
+        tester.element(find.byType(LoginPage)),
       );
       expect(scopedDeps.config.apiBaseUrl, 'https://staging.example.com');
     });

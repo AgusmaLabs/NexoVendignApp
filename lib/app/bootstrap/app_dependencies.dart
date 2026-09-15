@@ -1,5 +1,8 @@
 import 'package:flutter/widgets.dart';
 
+import '../../core/authentication/google_sign_in_config.dart';
+import '../../core/authentication/google_sign_in_service.dart';
+import '../../core/authentication/sdk_google_sign_in_service.dart';
 import '../../core/config/app_config.dart';
 import '../../core/device/barcode_scanner.dart';
 import '../../core/device/connectivity_service.dart';
@@ -9,6 +12,7 @@ import '../../core/networking/api_client.dart';
 import '../../core/networking/request_id.dart';
 import '../../core/storage/local_storage.dart';
 import '../../core/storage/secure_storage.dart';
+import '../../features/authentication/application/authentication_controller.dart';
 
 /// Composition root for VendingApp infrastructure dependencies.
 ///
@@ -17,6 +21,7 @@ import '../../core/storage/secure_storage.dart';
 final class AppDependencies {
   AppDependencies({
     required this.config,
+    required this.googleSignInConfig,
     required this.logger,
     required this.localStorage,
     required this.secureStorage,
@@ -25,9 +30,12 @@ final class AppDependencies {
     required this.connectivityService,
     required this.locationService,
     required this.barcodeScanner,
+    required this.googleSignInService,
+    required this.authenticationController,
   });
 
   final AppConfig config;
+  final GoogleSignInConfig googleSignInConfig;
   final AppLogger logger;
   final LocalStorage localStorage;
   final SecureStorage secureStorage;
@@ -36,6 +44,8 @@ final class AppDependencies {
   final ConnectivityService connectivityService;
   final LocationService locationService;
   final BarcodeScanner barcodeScanner;
+  final GoogleSignInService googleSignInService;
+  final AuthenticationController authenticationController;
 
   /// Builds the default production/development dependency graph.
   factory AppDependencies.create(AppConfig config) {
@@ -50,9 +60,21 @@ final class AppDependencies {
       logger: logger,
       requestIdGenerator: requestIdGenerator,
     );
+    final googleSignInConfig = GoogleSignInConfig.fromEnvironment(
+      config.environment,
+    );
+    final googleSignInService = SdkGoogleSignInService(
+      config: googleSignInConfig,
+      logger: logger,
+    );
+    final authenticationController = AuthenticationController(
+      googleSignInService: googleSignInService,
+      logger: logger,
+    );
 
     return AppDependencies(
       config: config,
+      googleSignInConfig: googleSignInConfig,
       logger: logger,
       localStorage: MemoryLocalStorage(),
       secureStorage: MemorySecureStorage(),
@@ -61,6 +83,8 @@ final class AppDependencies {
       connectivityService: const UnsupportedConnectivityService(),
       locationService: const UnsupportedLocationService(),
       barcodeScanner: const UnsupportedBarcodeScanner(),
+      googleSignInService: googleSignInService,
+      authenticationController: authenticationController,
     );
   }
 }
