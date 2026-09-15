@@ -34,7 +34,8 @@ Authorization: Bearer <session-jwt>
 }
 ```
 
-Slots may be present in the payload but are not consumed until Commit 7.
+Slots may be present in the resolve payload but are loaded explicitly via
+the dedicated slots endpoint (see [MACHINE_DETAIL.md](MACHINE_DETAIL.md)).
 
 ### Errors
 
@@ -43,7 +44,7 @@ Slots may be present in the payload but are not consumed until Commit 7.
 | 401 | Clear session → login |
 | 403 | Access denied |
 | 404 | Machine not found |
-| 422 | Invalid validation |
+| 422 | Request validation |
 | 5xx / network | Recoverable failure + retry |
 
 ## Flow
@@ -60,6 +61,8 @@ Authenticated ApiClient
 NexoVending
    ↓
 Machine context
+   ↓
+Machine detail + slots
 ```
 
 Client maps UUID-shaped values to `INTERNAL_ID` and other values to
@@ -74,6 +77,8 @@ Resolving → Failure → Retry → Resolving
 
 Failed identification does **not** replace an already selected machine.
 
+From `Resolved`, the operator continues to machine detail/slots.
+
 ## Security
 
 * JWT only via centralized Bearer attachment.
@@ -84,5 +89,7 @@ Failed identification does **not** replace an already selected machine.
 ## Related
 
 * [OPERATOR_BOOTSTRAP.md](OPERATOR_BOOTSTRAP.md)
+* [MACHINE_DETAIL.md](MACHINE_DETAIL.md)
 * [ADR-005](adr/ADR-005-machine-identification.md)
+* [ADR-006](adr/ADR-006-machine-detail-and-slots.md)
 * [Mobile API Contract](nexovending_API/Mobile_API_Contract_NexoVending.md)

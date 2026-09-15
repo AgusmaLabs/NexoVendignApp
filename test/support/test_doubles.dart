@@ -19,9 +19,14 @@ import 'package:vendingapp/core/storage/local_storage.dart';
 import 'package:vendingapp/core/storage/secure_storage.dart';
 import 'package:vendingapp/core/time/clock.dart';
 import 'package:vendingapp/features/authentication/application/authentication_controller.dart';
+import 'package:vendingapp/features/machine/application/machine_detail_controller.dart';
 import 'package:vendingapp/features/machine/application/machine_identification_controller.dart';
 import 'package:vendingapp/features/machine/domain/machine.dart';
+import 'package:vendingapp/features/machine/domain/machine_detail.dart';
+import 'package:vendingapp/features/machine/domain/machine_detail_service.dart';
 import 'package:vendingapp/features/machine/domain/machine_service.dart';
+import 'package:vendingapp/features/machine/domain/machine_slot.dart';
+import 'package:vendingapp/features/machine/domain/machine_slot_service.dart';
 import 'package:vendingapp/features/operator/application/operator_bootstrap_controller.dart';
 import 'package:vendingapp/features/operator/domain/operator.dart';
 import 'package:vendingapp/features/operator/domain/operator_service.dart';
@@ -107,6 +112,42 @@ Machine fakeMachine({
   );
 }
 
+MachineDetail fakeMachineDetail({
+  String machineId = '11111111-1111-1111-1111-111111111111',
+  String identifier = 'MIX-001',
+  String machineType = 'SNACK',
+  String name = 'Lobby',
+  String status = 'ACTIVE',
+}) {
+  return MachineDetail(
+    machineId: machineId,
+    identifier: identifier,
+    machineType: machineType,
+    name: name,
+    status: status,
+  );
+}
+
+MachineSlot fakeMachineSlot({
+  String slotId = 'slot-1',
+  int slotNumber = 1,
+  int capacity = 10,
+  String status = 'ACTIVE',
+  String? preferredProductId = 'prod-1',
+  String? sellingPrice = '1500',
+  int? currentQuantity = 4,
+}) {
+  return MachineSlot(
+    slotId: slotId,
+    slotNumber: slotNumber,
+    capacity: capacity,
+    status: status,
+    preferredProductId: preferredProductId,
+    sellingPrice: sellingPrice,
+    currentQuantity: currentQuantity,
+  );
+}
+
 AppDependencies testDependencies({
   AppConfig? config,
   GoogleSignInConfig? googleSignInConfig,
@@ -124,6 +165,9 @@ AppDependencies testDependencies({
   OperatorBootstrapController? operatorBootstrapController,
   MachineService? machineService,
   MachineIdentificationController? machineIdentificationController,
+  MachineDetailService? machineDetailService,
+  MachineSlotService? machineSlotService,
+  MachineDetailController? machineDetailController,
   AuthenticationController? authenticationController,
   Clock? clock,
   bool wireOperatorBootstrap = true,
@@ -136,6 +180,9 @@ AppDependencies testDependencies({
       sessionService ?? FakeSessionService(clock: resolvedClock);
   final resolvedOperator = operatorService ?? FakeOperatorService();
   final resolvedMachine = machineService ?? FakeMachineService();
+  final resolvedDetailService =
+      machineDetailService ?? FakeMachineDetailService();
+  final resolvedSlotService = machineSlotService ?? FakeMachineSlotService();
 
   late final AuthenticationController resolvedAuthController;
   final resolvedBootstrap =
@@ -150,6 +197,15 @@ AppDependencies testDependencies({
       machineIdentificationController ??
       MachineIdentificationController(
         machineService: resolvedMachine,
+        sessionService: resolvedSession,
+        logger: resolvedLogger,
+        onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
+      );
+  final resolvedDetailController =
+      machineDetailController ??
+      MachineDetailController(
+        detailService: resolvedDetailService,
+        slotService: resolvedSlotService,
         sessionService: resolvedSession,
         logger: resolvedLogger,
         onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
@@ -169,6 +225,7 @@ AppDependencies testDependencies({
             ? () async {
                 await resolvedBootstrap.clear();
                 await resolvedMachineController.clear();
+                await resolvedDetailController.clear();
               }
             : null,
       );
@@ -191,6 +248,9 @@ AppDependencies testDependencies({
     operatorBootstrapController: resolvedBootstrap,
     machineService: resolvedMachine,
     machineIdentificationController: resolvedMachineController,
+    machineDetailService: resolvedDetailService,
+    machineSlotService: resolvedSlotService,
+    machineDetailController: resolvedDetailController,
     authenticationController: resolvedAuthController,
     clock: resolvedClock,
   );
@@ -464,6 +524,67 @@ final class FakeMachineService implements MachineService {
       throw Exception('$failure');
     }
     return machine ?? fakeMachine();
+  }
+}
+
+final class FakeMachineDetailService implements MachineDetailService {
+  FakeMachineDetailService({this.detail, this.error, this.pending});
+
+  MachineDetail? detail;
+  Object? error;
+  Future<void>? pending;
+  var callCount = 0;
+  final machineIds = <String>[];
+  String? lastMachineId;
+
+  @override
+  Future<MachineDetail> getMachineDetail(String machineId) async {
+    callCount += 1;
+    lastMachineId = machineId;
+    machineIds.add(machineId);
+    final gate = pending;
+    if (gate != null) {
+      await gate;
+    }
+    final failure = error;
+    if (failure != null) {
+      if (failure is Exception) {
+        throw failure;
+      }
+      throw Exception('$failure');
+    }
+    return detail ?? fakeMachineDetail(machineId: machineId);
+  }
+}
+
+final class FakeMachineSlotService implements MachineSlotService {
+  FakeMachineSlotService({List<MachineSlot>? slots, this.error, this.pending})
+    : slots = slots ?? <MachineSlot>[fakeMachineSlot()];
+
+  List<MachineSlot> slots;
+  Object? error;
+  Future<void>? pending;
+  var callCount = 0;
+  final machineIds = <String>[];
+  String? lastMachineId;
+
+  @override
+  Future<List<MachineSlot>> getSlots(String machineId) async {
+    callCount += 1;
+    lastMachineId = machineId;
+    machineIds.add(machineId);
+    final gate = pending;
+    if (gate != null) {
+      await gate;
+    }
+    final failure = error;
+    if (failure != null) {
+      if (failure is Exception) {
+        throw failure;
+      }
+      throw Exception('$failure');
+    }
+    return List<MachineSlot>.from(slots);
   }
 }
 

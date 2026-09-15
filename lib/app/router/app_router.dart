@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../features/authentication/presentation/auth_gate.dart';
 import '../../features/machine/presentation/identify_machine_page.dart';
+import '../../features/machine/presentation/machine_detail_page.dart';
 import '../bootstrap/app_dependencies.dart';
 import '../home/unknown_route_page.dart';
 
@@ -13,6 +14,7 @@ abstract final class AppRouter {
   static const String homePath = '/';
   static const String loginPath = '/login';
   static const String identifyMachinePath = '/machines/identify';
+  static const String machineDetailPath = '/machines/detail';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -29,13 +31,28 @@ abstract final class AppRouter {
             final deps = AppDependenciesScope.of(context);
             return IdentifyMachinePage(
               controller: deps.machineIdentificationController,
-              onSignOut: () {
-                deps.machineIdentificationController.clear();
-                deps.operatorBootstrapController.clear();
-                deps.authenticationController.signOut();
-                Navigator.of(context)
-                    .pushNamedAndRemoveUntil(loginPath, (_) => false);
-              },
+              onSignOut: () => _signOut(context, deps),
+            );
+          },
+        );
+      case machineDetailPath:
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) {
+            final deps = AppDependenciesScope.of(context);
+            final machineId =
+                settings.arguments as String? ??
+                deps.machineIdentificationController.currentMachine?.machineId;
+            if (machineId == null || machineId.trim().isEmpty) {
+              return const UnknownRoutePage(
+                routeName: machineDetailPath,
+                homePath: identifyMachinePath,
+              );
+            }
+            return MachineDetailPage(
+              machineId: machineId,
+              controller: deps.machineDetailController,
+              onSignOut: () => _signOut(context, deps),
             );
           },
         );
@@ -46,5 +63,13 @@ abstract final class AppRouter {
               UnknownRoutePage(routeName: settings.name, homePath: loginPath),
         );
     }
+  }
+
+  static void _signOut(BuildContext context, AppDependencies deps) {
+    deps.machineDetailController.clear();
+    deps.machineIdentificationController.clear();
+    deps.operatorBootstrapController.clear();
+    deps.authenticationController.signOut();
+    Navigator.of(context).pushNamedAndRemoveUntil(loginPath, (_) => false);
   }
 }

@@ -18,17 +18,19 @@ import '../../core/storage/local_storage.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/time/clock.dart';
 import '../../features/authentication/application/authentication_controller.dart';
+import '../../features/machine/application/machine_detail_controller.dart';
 import '../../features/machine/application/machine_identification_controller.dart';
+import '../../features/machine/data/api_machine_detail_service.dart';
 import '../../features/machine/data/api_machine_service.dart';
+import '../../features/machine/data/api_machine_slot_service.dart';
+import '../../features/machine/domain/machine_detail_service.dart';
 import '../../features/machine/domain/machine_service.dart';
+import '../../features/machine/domain/machine_slot_service.dart';
 import '../../features/operator/application/operator_bootstrap_controller.dart';
 import '../../features/operator/data/api_operator_service.dart';
 import '../../features/operator/domain/operator_service.dart';
 
 /// Composition root for VendingApp infrastructure dependencies.
-///
-/// Features must receive these collaborators via injection — never construct
-/// HTTP clients, storage, or device services inside widgets.
 final class AppDependencies {
   AppDependencies({
     required this.config,
@@ -47,6 +49,9 @@ final class AppDependencies {
     required this.operatorBootstrapController,
     required this.machineService,
     required this.machineIdentificationController,
+    required this.machineDetailService,
+    required this.machineSlotService,
+    required this.machineDetailController,
     required this.authenticationController,
     required this.clock,
   });
@@ -67,10 +72,12 @@ final class AppDependencies {
   final OperatorBootstrapController operatorBootstrapController;
   final MachineService machineService;
   final MachineIdentificationController machineIdentificationController;
+  final MachineDetailService machineDetailService;
+  final MachineSlotService machineSlotService;
+  final MachineDetailController machineDetailController;
   final AuthenticationController authenticationController;
   final Clock clock;
 
-  /// Builds the default production/development dependency graph.
   factory AppDependencies.create(AppConfig config) {
     final logger = ConsoleAppLogger(
       minimumLevel: config.environment == AppEnvironment.production
@@ -103,6 +110,14 @@ final class AppDependencies {
       apiClient: apiClient,
       logger: logger,
     );
+    final machineDetailService = ApiMachineDetailService(
+      apiClient: apiClient,
+      logger: logger,
+    );
+    final machineSlotService = ApiMachineSlotService(
+      apiClient: apiClient,
+      logger: logger,
+    );
 
     late final AuthenticationController authenticationController;
     final operatorBootstrapController = OperatorBootstrapController(
@@ -113,6 +128,13 @@ final class AppDependencies {
     );
     final machineIdentificationController = MachineIdentificationController(
       machineService: machineService,
+      sessionService: sessionService,
+      logger: logger,
+      onSessionExpired: () => authenticationController.handleSessionExpired(),
+    );
+    final machineDetailController = MachineDetailController(
+      detailService: machineDetailService,
+      slotService: machineSlotService,
       sessionService: sessionService,
       logger: logger,
       onSessionExpired: () => authenticationController.handleSessionExpired(),
@@ -134,6 +156,7 @@ final class AppDependencies {
       afterSessionCleared: () async {
         await operatorBootstrapController.clear();
         await machineIdentificationController.clear();
+        await machineDetailController.clear();
       },
     );
 
@@ -154,13 +177,15 @@ final class AppDependencies {
       operatorBootstrapController: operatorBootstrapController,
       machineService: machineService,
       machineIdentificationController: machineIdentificationController,
+      machineDetailService: machineDetailService,
+      machineSlotService: machineSlotService,
+      machineDetailController: machineDetailController,
       authenticationController: authenticationController,
       clock: clock,
     );
   }
 }
 
-/// Exposes [AppDependencies] to the widget tree for injectable infrastructure.
 final class AppDependenciesScope extends InheritedWidget {
   const AppDependenciesScope({
     required this.dependencies,

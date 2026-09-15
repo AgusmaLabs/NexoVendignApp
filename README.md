@@ -30,12 +30,14 @@ See:
 * [docs/SESSION.md](docs/SESSION.md)
 * [docs/OPERATOR_BOOTSTRAP.md](docs/OPERATOR_BOOTSTRAP.md)
 * [docs/MACHINE_IDENTIFICATION.md](docs/MACHINE_IDENTIFICATION.md)
+* [docs/MACHINE_DETAIL.md](docs/MACHINE_DETAIL.md)
 * [docs/NETWORKING.md](docs/NETWORKING.md)
 * [docs/adr/ADR-001-vendingapp-api-boundary.md](docs/adr/ADR-001-vendingapp-api-boundary.md)
 * [docs/adr/ADR-002-google-sign-in-boundary.md](docs/adr/ADR-002-google-sign-in-boundary.md)
 * [docs/adr/ADR-003-session-token-storage.md](docs/adr/ADR-003-session-token-storage.md)
 * [docs/adr/ADR-004-operator-bootstrap.md](docs/adr/ADR-004-operator-bootstrap.md)
 * [docs/adr/ADR-005-machine-identification.md](docs/adr/ADR-005-machine-identification.md)
+* [docs/adr/ADR-006-machine-detail-and-slots.md](docs/adr/ADR-006-machine-detail-and-slots.md)
 
 ## Tooling
 
@@ -69,11 +71,22 @@ Supported `APP_ENV` values: `development`, `staging`, `production`.
 
 ## Status
 
-Implemented through Commit 6:
+| Capability | Status |
+| ---------- | ------ |
+| Authentication | ✅ |
+| Vending Session | ✅ |
+| Operator Bootstrap | ✅ |
+| Machine Identification | ✅ |
+| Machine Detail | ✅ |
+| Machine Slots | ✅ |
+| Replenishment | ⏳ |
+
+Implemented through Commit 7:
 
 * application shell and infrastructure;
 * Google Sign-In → Session JWT → SecureStorage;
 * operator bootstrap via `GET /api/v1/operators/me`;
-* machine identification via `GET /api/v1/machines/resolve`.
+* machine identification via `GET /api/v1/machines/resolve`;
+* machine detail + physical slots via `GET /api/v1/machines/{id}` and `/slots`.
 
-Machine detail/slots, products, and replenishments arrive in subsequent commits.
+Products and replenishment arrive in subsequent commits.

@@ -62,6 +62,12 @@ class _IdentifyMachinePageState extends State<IdentifyMachinePage> {
                   identifier: machine.identifier,
                   machineType: machine.machineType,
                   status: machine.status,
+                  onContinue: () {
+                    Navigator.of(context).pushNamed(
+                      '/machines/detail',
+                      arguments: machine.machineId,
+                    );
+                  },
                   onIdentifyAnother: () {
                     _identifierController.clear();
                     controller.resetToInitial();
@@ -174,6 +180,7 @@ class _ResolvedView extends StatelessWidget {
     required this.identifier,
     required this.machineType,
     required this.status,
+    required this.onContinue,
     required this.onIdentifyAnother,
   });
 
@@ -182,6 +189,7 @@ class _ResolvedView extends StatelessWidget {
   final String identifier;
   final String machineType;
   final String status;
+  final VoidCallback onContinue;
   final VoidCallback onIdentifyAnother;
 
   @override
@@ -213,12 +221,11 @@ class _ResolvedView extends StatelessWidget {
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: 24),
-        Text(
-          'Listo para el detalle de máquina',
-          style: theme.textTheme.bodyMedium,
-          textAlign: TextAlign.center,
+        FilledButton(
+          onPressed: onContinue,
+          child: const Text('Ver detalle y slots'),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 12),
         OutlinedButton(
           onPressed: onIdentifyAnother,
           child: const Text('Identificar otra máquina'),

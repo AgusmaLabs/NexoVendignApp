@@ -24,7 +24,7 @@ NexoVending remains the authority for existence, tenant, and access.
 ## Consequences
 
 - Current machine is application state (in-memory), not local authority.
-- Slots / replenishment consume this context in later commits.
+- Detail / slots / replenishment consume this context in later commits.
 - No tenant selector and no local machine authorization rules.
 
 ## Alternatives considered
