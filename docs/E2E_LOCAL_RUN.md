@@ -36,6 +36,30 @@ flutter run \
   --dart-define=GOOGLE_SERVER_CLIENT_ID=<web-client-id>.apps.googleusercontent.com
 ```
 
+## Google Cloud (OAuth)
+
+| Client type | Purpose | Notes |
+| --- | --- | --- |
+| Web application | Backend `GOOGLE_CLIENT_ID` + Flutter `GOOGLE_SERVER_CLIENT_ID` | IDs **must match** (audience check) |
+| Android | Google Sign-In on device | Package `com.example.vendingapp` + debug SHA-1 |
+
+This machine's debug SHA-1 (for the Android OAuth client):
+
+```text
+4F:AD:F8:9B:1D:5C:85:83:25:C3:65:AE:67:17:EF:F9:73:68:3A:AF
+```
+
+Regenerate if the debug keystore is recreated:
+
+```bash
+keytool -list -v -alias androiddebugkey \
+  -keystore %USERPROFILE%\.android\debug.keystore \
+  -storepass android -keypass android
+```
+
+Populate NexoVending `.env` from `.env.example` (`GOOGLE_*`, `JWT_*`), then
+`docker compose up -d --build` (or restart the API).
+
 ## Backend prep
 
 See NexoVending `docs/E2E_REPLENISHMENT.md` (V13 + V14). After first Google
