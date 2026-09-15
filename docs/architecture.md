@@ -1,6 +1,6 @@
 # VendingApp Architecture
 
-**Status:** Operator bootstrap (Commit 5)
+**Status:** Machine identification (Commit 6)
 **Client:** Flutter
 **Backend:** NexoVending public HTTP API
 
@@ -33,6 +33,8 @@ Google Identity
 NexoVending Session
       ↓
 Vending Operator
+      ↓
+Machine identification
       ↓
 Vending Features
 ```
@@ -76,24 +78,21 @@ lib/
 │   └── device/
 ├── features/
 │   ├── authentication/
-│   │   ├── application/
-│   │   └── presentation/
-│   └── operator/
-│       ├── application/
-│       ├── data/
-│       ├── domain/
-│       └── presentation/
+│   ├── operator/
+│   └── machine/
 └── main.dart
 ```
 
-## Authentication + session + operator
+## Authentication + session + operator + machine
 
 ```text
 AuthGate
   → Login (Google → Session)
   → OperatorBootstrapController
   → GET /api/v1/operators/me
-  → Operator home shell
+  → Identify machine
+  → GET /api/v1/machines/resolve
+  → Machine context
 ```
 
 * Session JWT authority: authentication.
@@ -122,9 +121,11 @@ Google client IDs via `--dart-define`.
 * [Authentication](AUTHENTICATION.md)
 * [Session](SESSION.md)
 * [Operator Bootstrap](OPERATOR_BOOTSTRAP.md)
+* [Machine Identification](MACHINE_IDENTIFICATION.md)
 * [Networking](NETWORKING.md)
 * [ADR-001](adr/ADR-001-vendingapp-api-boundary.md)
 * [ADR-002](adr/ADR-002-google-sign-in-boundary.md)
 * [ADR-003](adr/ADR-003-session-token-storage.md)
 * [ADR-004](adr/ADR-004-operator-bootstrap.md)
+* [ADR-005](adr/ADR-005-machine-identification.md)
 * [Product requirements](PRD.md)

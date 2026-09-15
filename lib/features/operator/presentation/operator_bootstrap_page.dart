@@ -1,16 +1,23 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/bootstrap/app_dependencies.dart';
+import '../../../app/router/app_router.dart';
 import '../application/operator_bootstrap_controller.dart';
 import '../application/operator_bootstrap_state.dart';
 import '../domain/operator.dart';
 
 /// Minimal shell after operator bootstrap succeeds.
 class OperatorHomePage extends StatelessWidget {
-  const OperatorHomePage({required this.operator, this.onSignOut, super.key});
+  const OperatorHomePage({
+    required this.operator,
+    this.onSignOut,
+    this.onIdentifyMachine,
+    super.key,
+  });
 
   final Operator operator;
   final VoidCallback? onSignOut;
+  final VoidCallback? onIdentifyMachine;
 
   @override
   Widget build(BuildContext context) {
@@ -30,11 +37,21 @@ class OperatorHomePage extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Operador listo. Las operaciones de campo llegan en commits siguientes.',
+                  'Operador listo. Identifica una máquina para continuar.',
                   style: theme.textTheme.bodyMedium,
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 24),
+                FilledButton(
+                  onPressed:
+                      onIdentifyMachine ??
+                      () {
+                        Navigator.of(context)
+                            .pushNamed(AppRouter.identifyMachinePath);
+                      },
+                  child: const Text('Identificar máquina'),
+                ),
+                const SizedBox(height: 12),
                 TextButton(
                   onPressed: onSignOut,
                   child: const Text('Cerrar sesión'),

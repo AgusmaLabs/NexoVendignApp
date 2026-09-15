@@ -18,6 +18,9 @@ import '../../core/storage/local_storage.dart';
 import '../../core/storage/secure_storage.dart';
 import '../../core/time/clock.dart';
 import '../../features/authentication/application/authentication_controller.dart';
+import '../../features/machine/application/machine_identification_controller.dart';
+import '../../features/machine/data/api_machine_service.dart';
+import '../../features/machine/domain/machine_service.dart';
 import '../../features/operator/application/operator_bootstrap_controller.dart';
 import '../../features/operator/data/api_operator_service.dart';
 import '../../features/operator/domain/operator_service.dart';
@@ -42,6 +45,8 @@ final class AppDependencies {
     required this.sessionService,
     required this.operatorService,
     required this.operatorBootstrapController,
+    required this.machineService,
+    required this.machineIdentificationController,
     required this.authenticationController,
     required this.clock,
   });
@@ -60,6 +65,8 @@ final class AppDependencies {
   final SessionService sessionService;
   final OperatorService operatorService;
   final OperatorBootstrapController operatorBootstrapController;
+  final MachineService machineService;
+  final MachineIdentificationController machineIdentificationController;
   final AuthenticationController authenticationController;
   final Clock clock;
 
@@ -92,10 +99,20 @@ final class AppDependencies {
       apiClient: apiClient,
       logger: logger,
     );
+    final machineService = ApiMachineService(
+      apiClient: apiClient,
+      logger: logger,
+    );
 
     late final AuthenticationController authenticationController;
     final operatorBootstrapController = OperatorBootstrapController(
       operatorService: operatorService,
+      sessionService: sessionService,
+      logger: logger,
+      onSessionExpired: () => authenticationController.handleSessionExpired(),
+    );
+    final machineIdentificationController = MachineIdentificationController(
+      machineService: machineService,
       sessionService: sessionService,
       logger: logger,
       onSessionExpired: () => authenticationController.handleSessionExpired(),
@@ -114,7 +131,10 @@ final class AppDependencies {
       config: config,
       logger: logger,
       afterSessionEstablished: operatorBootstrapController.load,
-      afterSessionCleared: operatorBootstrapController.clear,
+      afterSessionCleared: () async {
+        await operatorBootstrapController.clear();
+        await machineIdentificationController.clear();
+      },
     );
 
     return AppDependencies(
@@ -132,6 +152,8 @@ final class AppDependencies {
       sessionService: sessionService,
       operatorService: operatorService,
       operatorBootstrapController: operatorBootstrapController,
+      machineService: machineService,
+      machineIdentificationController: machineIdentificationController,
       authenticationController: authenticationController,
       clock: clock,
     );

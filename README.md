@@ -29,11 +29,13 @@ See:
 * [docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)
 * [docs/SESSION.md](docs/SESSION.md)
 * [docs/OPERATOR_BOOTSTRAP.md](docs/OPERATOR_BOOTSTRAP.md)
+* [docs/MACHINE_IDENTIFICATION.md](docs/MACHINE_IDENTIFICATION.md)
 * [docs/NETWORKING.md](docs/NETWORKING.md)
 * [docs/adr/ADR-001-vendingapp-api-boundary.md](docs/adr/ADR-001-vendingapp-api-boundary.md)
 * [docs/adr/ADR-002-google-sign-in-boundary.md](docs/adr/ADR-002-google-sign-in-boundary.md)
 * [docs/adr/ADR-003-session-token-storage.md](docs/adr/ADR-003-session-token-storage.md)
 * [docs/adr/ADR-004-operator-bootstrap.md](docs/adr/ADR-004-operator-bootstrap.md)
+* [docs/adr/ADR-005-machine-identification.md](docs/adr/ADR-005-machine-identification.md)
 
 ## Tooling
 
@@ -67,11 +69,11 @@ Supported `APP_ENV` values: `development`, `staging`, `production`.
 
 ## Status
 
-Implemented through Commit 5:
+Implemented through Commit 6:
 
 * application shell and infrastructure;
 * Google Sign-In → Session JWT → SecureStorage;
 * operator bootstrap via `GET /api/v1/operators/me`;
-* minimal post-login shell (`Bienvenido, <operator>`).
+* machine identification via `GET /api/v1/machines/resolve`.
 
-Machines, products, and replenishments arrive in subsequent commits.
+Machine detail/slots, products, and replenishments arrive in subsequent commits.

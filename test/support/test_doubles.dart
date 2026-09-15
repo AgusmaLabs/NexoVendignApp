@@ -19,6 +19,9 @@ import 'package:vendingapp/core/storage/local_storage.dart';
 import 'package:vendingapp/core/storage/secure_storage.dart';
 import 'package:vendingapp/core/time/clock.dart';
 import 'package:vendingapp/features/authentication/application/authentication_controller.dart';
+import 'package:vendingapp/features/machine/application/machine_identification_controller.dart';
+import 'package:vendingapp/features/machine/domain/machine.dart';
+import 'package:vendingapp/features/machine/domain/machine_service.dart';
 import 'package:vendingapp/features/operator/application/operator_bootstrap_controller.dart';
 import 'package:vendingapp/features/operator/domain/operator.dart';
 import 'package:vendingapp/features/operator/domain/operator_service.dart';
@@ -88,6 +91,22 @@ Operator fakeOperator({
   );
 }
 
+Machine fakeMachine({
+  String machineId = '11111111-1111-1111-1111-111111111111',
+  String identifier = 'MIX-001',
+  String machineType = 'SNACK',
+  String name = 'Lobby',
+  String status = 'ACTIVE',
+}) {
+  return Machine(
+    machineId: machineId,
+    identifier: identifier,
+    machineType: machineType,
+    name: name,
+    status: status,
+  );
+}
+
 AppDependencies testDependencies({
   AppConfig? config,
   GoogleSignInConfig? googleSignInConfig,
@@ -103,6 +122,8 @@ AppDependencies testDependencies({
   SessionService? sessionService,
   OperatorService? operatorService,
   OperatorBootstrapController? operatorBootstrapController,
+  MachineService? machineService,
+  MachineIdentificationController? machineIdentificationController,
   AuthenticationController? authenticationController,
   Clock? clock,
   bool wireOperatorBootstrap = true,
@@ -114,12 +135,21 @@ AppDependencies testDependencies({
   final resolvedSession =
       sessionService ?? FakeSessionService(clock: resolvedClock);
   final resolvedOperator = operatorService ?? FakeOperatorService();
+  final resolvedMachine = machineService ?? FakeMachineService();
 
   late final AuthenticationController resolvedAuthController;
   final resolvedBootstrap =
       operatorBootstrapController ??
       OperatorBootstrapController(
         operatorService: resolvedOperator,
+        sessionService: resolvedSession,
+        logger: resolvedLogger,
+        onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
+      );
+  final resolvedMachineController =
+      machineIdentificationController ??
+      MachineIdentificationController(
+        machineService: resolvedMachine,
         sessionService: resolvedSession,
         logger: resolvedLogger,
         onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
@@ -136,7 +166,10 @@ AppDependencies testDependencies({
             ? resolvedBootstrap.load
             : null,
         afterSessionCleared: wireOperatorBootstrap
-            ? resolvedBootstrap.clear
+            ? () async {
+                await resolvedBootstrap.clear();
+                await resolvedMachineController.clear();
+              }
             : null,
       );
 
@@ -156,6 +189,8 @@ AppDependencies testDependencies({
     sessionService: resolvedSession,
     operatorService: resolvedOperator,
     operatorBootstrapController: resolvedBootstrap,
+    machineService: resolvedMachine,
+    machineIdentificationController: resolvedMachineController,
     authenticationController: resolvedAuthController,
     clock: resolvedClock,
   );
@@ -402,6 +437,33 @@ final class FakeOperatorService implements OperatorService {
       throw Exception('$failure');
     }
     return operator ?? fakeOperator();
+  }
+}
+
+final class FakeMachineService implements MachineService {
+  FakeMachineService({this.machine, this.error, this.delay = Duration.zero});
+
+  Machine? machine;
+  Object? error;
+  Duration delay;
+  var callCount = 0;
+  String? lastIdentifier;
+
+  @override
+  Future<Machine> resolveMachine(String identifier) async {
+    callCount += 1;
+    lastIdentifier = identifier;
+    if (delay > Duration.zero) {
+      await Future<void>.delayed(delay);
+    }
+    final failure = error;
+    if (failure != null) {
+      if (failure is Exception) {
+        throw failure;
+      }
+      throw Exception('$failure');
+    }
+    return machine ?? fakeMachine();
   }
 }
 

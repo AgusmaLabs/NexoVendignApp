@@ -117,4 +117,6 @@ flutter test test/features/operator
 
 * [AUTHENTICATION.md](AUTHENTICATION.md)
 * [SESSION.md](SESSION.md)
+* [MACHINE_IDENTIFICATION.md](MACHINE_IDENTIFICATION.md)
 * [ADR-004](adr/ADR-004-operator-bootstrap.md)
+* [ADR-005](adr/ADR-005-machine-identification.md)
