@@ -88,6 +88,9 @@ class _MachineDetailPageState extends State<MachineDetailPage> {
                     slots: slots,
                     selectedSlotId: selectedSlotId,
                     onSelectSlot: controller.selectSlot,
+                    onStartReplenishment: () {
+                      Navigator.of(context).pushNamed('/replenishments/start');
+                    },
                   ),
                 MachineDetailFailure(:final message, :final canRetry) => Center(
                   child: Column(
@@ -133,6 +136,7 @@ class _LoadedView extends StatelessWidget {
     required this.slots,
     required this.selectedSlotId,
     required this.onSelectSlot,
+    required this.onStartReplenishment,
   });
 
   final ThemeData theme;
@@ -140,6 +144,7 @@ class _LoadedView extends StatelessWidget {
   final List<MachineSlot> slots;
   final String? selectedSlotId;
   final ValueChanged<String> onSelectSlot;
+  final VoidCallback onStartReplenishment;
 
   @override
   Widget build(BuildContext context) {
@@ -185,6 +190,11 @@ class _LoadedView extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
         ],
+        const SizedBox(height: 24),
+        FilledButton(
+          onPressed: onStartReplenishment,
+          child: const Text('Iniciar reposición'),
+        ),
       ],
     );
   }

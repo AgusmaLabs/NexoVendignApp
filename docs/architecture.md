@@ -1,6 +1,6 @@
 # VendingApp Architecture
 
-**Status:** Machine detail and slots (Commit 7)
+**Status:** Replenishment creation (Commit 8)
 **Client:** Flutter
 **Backend:** NexoVending public HTTP API
 
@@ -30,17 +30,25 @@ Flutter captures and presents. NexoVending decides and persists.
 ```text
 Google Identity
       ↓
-NexoVending Session
+Session JWT
       ↓
 Vending Operator
       ↓
 Current Machine
       ↓
-Machine Detail
+Current Replenishment
       ↓
-Physical Slots
+Replenishment Lines
       ↓
-Future Replenishment
+Completion
+      ↓
+Backend Inventory Transaction
+```
+
+```text
+Create Replenishment
+        ≠
+Inventory Movement
 ```
 
 ## Dependency direction
@@ -83,11 +91,12 @@ lib/
 ├── features/
 │   ├── authentication/
 │   ├── operator/
-│   └── machine/
+│   ├── machine/
+│   └── replenishment/
 └── main.dart
 ```
 
-## Authentication + session + operator + machine
+## Authentication + session + operator + machine + replenishment
 
 ```text
 AuthGate
@@ -97,9 +106,10 @@ AuthGate
   → Identify machine
   → GET /api/v1/machines/resolve
   → Machine detail + slots (concurrent)
-  → GET /api/v1/machines/{id}
-  → GET /api/v1/machines/{id}/slots
-  → Operational machine context
+  → Start replenishment
+  → LocationService → GPS coordinates
+  → POST /api/v1/replenishments
+  → Current Replenishment (IN_PROGRESS, empty lines)
 ```
 
 ```text
@@ -116,6 +126,7 @@ Not a fixed SKU assignment.
 * Session JWT authority: authentication.
 * `/operators/me` authority: Vending operator identity.
 * Machine/slots authority: NexoVending configuration.
+* Replenishment create authority: NexoVending (idempotent POST).
 * Flutter does not fabricate operators or authorize replenishment.
 
 ## Infrastructure
@@ -124,6 +135,8 @@ Not a fixed SKU assignment.
 * `SessionService` / `SecureStorage` — session persistence.
 * `OperatorService` — operator bootstrap only.
 * `MachineService` / `MachineDetailService` / `MachineSlotService` — machine APIs.
+* `ReplenishmentService` — create replenishment sessions.
+* `LocationService` — GPS for create payload.
 * `AppDependencies` — composition root.
 
 ## Configuration
@@ -134,7 +147,7 @@ Google client IDs via `--dart-define`.
 ## Navigation and theme
 
 * `AppRouter` initial route `/login` → `AuthGate`.
-* `/machines/identify` → `/machines/detail`.
+* `/machines/identify` → `/machines/detail` → `/replenishments/start`.
 * `AppTheme` owns global `ThemeData`.
 
 ## Related documents
@@ -144,6 +157,7 @@ Google client IDs via `--dart-define`.
 * [Operator Bootstrap](OPERATOR_BOOTSTRAP.md)
 * [Machine Identification](MACHINE_IDENTIFICATION.md)
 * [Machine Detail](MACHINE_DETAIL.md)
+* [Replenishment](REPLENISHMENT.md)
 * [Networking](NETWORKING.md)
 * [ADR-001](adr/ADR-001-vendingapp-api-boundary.md)
 * [ADR-002](adr/ADR-002-google-sign-in-boundary.md)
@@ -151,4 +165,5 @@ Google client IDs via `--dart-define`.
 * [ADR-004](adr/ADR-004-operator-bootstrap.md)
 * [ADR-005](adr/ADR-005-machine-identification.md)
 * [ADR-006](adr/ADR-006-machine-detail-and-slots.md)
+* [ADR-007](adr/ADR-007-replenishment-creation.md)
 * [Product requirements](PRD.md)

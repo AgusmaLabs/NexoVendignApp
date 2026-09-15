@@ -127,8 +127,12 @@ Stale responses are ignored: a later `load(B)` supersedes an in-flight
 * Tenant and machine access remain NexoVending authority.
 * Slot selection is UI state only.
 
+From detail, the operator continues to [replenishment creation](REPLENISHMENT.md).
+
 ## Related
 
 * [MACHINE_IDENTIFICATION.md](MACHINE_IDENTIFICATION.md)
+* [REPLENISHMENT.md](REPLENISHMENT.md)
 * [ADR-006](adr/ADR-006-machine-detail-and-slots.md)
+* [ADR-007](adr/ADR-007-replenishment-creation.md)
 * [Mobile API Contract](nexovending_API/Mobile_API_Contract_NexoVending.md)

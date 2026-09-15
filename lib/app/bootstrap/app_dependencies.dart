@@ -29,6 +29,9 @@ import '../../features/machine/domain/machine_slot_service.dart';
 import '../../features/operator/application/operator_bootstrap_controller.dart';
 import '../../features/operator/data/api_operator_service.dart';
 import '../../features/operator/domain/operator_service.dart';
+import '../../features/replenishment/application/replenishment_creation_controller.dart';
+import '../../features/replenishment/data/api_replenishment_service.dart';
+import '../../features/replenishment/domain/replenishment_service.dart';
 
 /// Composition root for VendingApp infrastructure dependencies.
 final class AppDependencies {
@@ -52,6 +55,8 @@ final class AppDependencies {
     required this.machineDetailService,
     required this.machineSlotService,
     required this.machineDetailController,
+    required this.replenishmentService,
+    required this.replenishmentCreationController,
     required this.authenticationController,
     required this.clock,
   });
@@ -75,6 +80,8 @@ final class AppDependencies {
   final MachineDetailService machineDetailService;
   final MachineSlotService machineSlotService;
   final MachineDetailController machineDetailController;
+  final ReplenishmentService replenishmentService;
+  final ReplenishmentCreationController replenishmentCreationController;
   final AuthenticationController authenticationController;
   final Clock clock;
 
@@ -118,6 +125,22 @@ final class AppDependencies {
       apiClient: apiClient,
       logger: logger,
     );
+    final replenishmentService = ApiReplenishmentService(
+      apiClient: apiClient,
+      logger: logger,
+    );
+
+    // Contract requires GPS on create; real device GPS arrives later.
+    // Development uses fixed coords so local API testing can proceed.
+    final locationService = config.environment == AppEnvironment.production
+        ? const UnsupportedLocationService()
+        : const FixedLocationService(
+            DeviceLocation(
+              latitude: -35.4264,
+              longitude: -71.6554,
+              accuracyMeters: 12.4,
+            ),
+          );
 
     late final AuthenticationController authenticationController;
     final operatorBootstrapController = OperatorBootstrapController(
@@ -139,6 +162,16 @@ final class AppDependencies {
       logger: logger,
       onSessionExpired: () => authenticationController.handleSessionExpired(),
     );
+    final replenishmentCreationController = ReplenishmentCreationController(
+      replenishmentService: replenishmentService,
+      machineIdentificationController: machineIdentificationController,
+      operatorBootstrapController: operatorBootstrapController,
+      locationService: locationService,
+      sessionService: sessionService,
+      requestIdGenerator: requestIdGenerator,
+      logger: logger,
+      onSessionExpired: () => authenticationController.handleSessionExpired(),
+    );
 
     final googleSignInConfig = GoogleSignInConfig.fromEnvironment(
       config.environment,
@@ -157,6 +190,7 @@ final class AppDependencies {
         await operatorBootstrapController.clear();
         await machineIdentificationController.clear();
         await machineDetailController.clear();
+        await replenishmentCreationController.clear();
       },
     );
 
@@ -169,7 +203,7 @@ final class AppDependencies {
       apiClient: apiClient,
       requestIdGenerator: requestIdGenerator,
       connectivityService: const UnsupportedConnectivityService(),
-      locationService: const UnsupportedLocationService(),
+      locationService: locationService,
       barcodeScanner: const UnsupportedBarcodeScanner(),
       googleSignInService: googleSignInService,
       sessionService: sessionService,
@@ -180,6 +214,8 @@ final class AppDependencies {
       machineDetailService: machineDetailService,
       machineSlotService: machineSlotService,
       machineDetailController: machineDetailController,
+      replenishmentService: replenishmentService,
+      replenishmentCreationController: replenishmentCreationController,
       authenticationController: authenticationController,
       clock: clock,
     );

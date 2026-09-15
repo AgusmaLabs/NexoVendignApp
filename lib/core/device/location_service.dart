@@ -11,7 +11,7 @@ final class DeviceLocation {
   final double? accuracyMeters;
 }
 
-/// Abstraction over device location. Real GPS arrives in later commits.
+/// Abstraction over device location.
 abstract interface class LocationService {
   Future<DeviceLocation> getCurrentLocation();
 }
@@ -24,4 +24,14 @@ final class UnsupportedLocationService implements LocationService {
   Future<DeviceLocation> getCurrentLocation() {
     throw UnsupportedError('LocationService is not implemented yet');
   }
+}
+
+/// Fixed coordinates for development / local API testing without device GPS.
+final class FixedLocationService implements LocationService {
+  const FixedLocationService(this.location);
+
+  final DeviceLocation location;
+
+  @override
+  Future<DeviceLocation> getCurrentLocation() async => location;
 }

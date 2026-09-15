@@ -30,6 +30,9 @@ import 'package:vendingapp/features/machine/domain/machine_slot_service.dart';
 import 'package:vendingapp/features/operator/application/operator_bootstrap_controller.dart';
 import 'package:vendingapp/features/operator/domain/operator.dart';
 import 'package:vendingapp/features/operator/domain/operator_service.dart';
+import 'package:vendingapp/features/replenishment/application/replenishment_creation_controller.dart';
+import 'package:vendingapp/features/replenishment/domain/replenishment.dart';
+import 'package:vendingapp/features/replenishment/domain/replenishment_service.dart';
 
 AppConfig testConfig({
   String apiBaseUrl = 'http://localhost:8080',
@@ -148,6 +151,38 @@ MachineSlot fakeMachineSlot({
   );
 }
 
+Replenishment fakeReplenishment({
+  String id = 'rep-1',
+  String machineId = '11111111-1111-1111-1111-111111111111',
+  String operatorId = 'op-1',
+  String status = 'IN_PROGRESS',
+  String machineType = 'SNACK',
+  String startedAt = '2026-09-15T12:00:00+00:00',
+  String? completedAt,
+  String idempotencyKey = 'idem-1',
+  int version = 1,
+  double latitude = -35.4264,
+  double longitude = -71.6554,
+  double? accuracy = 12.4,
+}) {
+  return Replenishment(
+    id: id,
+    machineId: machineId,
+    operatorId: operatorId,
+    status: status,
+    machineType: machineType,
+    startedAt: startedAt,
+    completedAt: completedAt,
+    location: ReplenishmentLocation(
+      latitude: latitude,
+      longitude: longitude,
+      accuracy: accuracy,
+    ),
+    idempotencyKey: idempotencyKey,
+    version: version,
+  );
+}
+
 AppDependencies testDependencies({
   AppConfig? config,
   GoogleSignInConfig? googleSignInConfig,
@@ -168,6 +203,8 @@ AppDependencies testDependencies({
   MachineDetailService? machineDetailService,
   MachineSlotService? machineSlotService,
   MachineDetailController? machineDetailController,
+  ReplenishmentService? replenishmentService,
+  ReplenishmentCreationController? replenishmentCreationController,
   AuthenticationController? authenticationController,
   Clock? clock,
   bool wireOperatorBootstrap = true,
@@ -183,6 +220,19 @@ AppDependencies testDependencies({
   final resolvedDetailService =
       machineDetailService ?? FakeMachineDetailService();
   final resolvedSlotService = machineSlotService ?? FakeMachineSlotService();
+  final resolvedReplenishment =
+      replenishmentService ?? FakeReplenishmentService();
+  final resolvedRequestIds =
+      requestIdGenerator ?? UuidRequestIdGenerator();
+  final resolvedLocation =
+      locationService ??
+      const FixedLocationService(
+        DeviceLocation(
+          latitude: -35.4264,
+          longitude: -71.6554,
+          accuracyMeters: 12.4,
+        ),
+      );
 
   late final AuthenticationController resolvedAuthController;
   final resolvedBootstrap =
@@ -210,6 +260,18 @@ AppDependencies testDependencies({
         logger: resolvedLogger,
         onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
       );
+  final resolvedReplenishmentController =
+      replenishmentCreationController ??
+      ReplenishmentCreationController(
+        replenishmentService: resolvedReplenishment,
+        machineIdentificationController: resolvedMachineController,
+        operatorBootstrapController: resolvedBootstrap,
+        locationService: resolvedLocation,
+        sessionService: resolvedSession,
+        requestIdGenerator: resolvedRequestIds,
+        logger: resolvedLogger,
+        onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
+      );
 
   resolvedAuthController =
       authenticationController ??
@@ -226,6 +288,7 @@ AppDependencies testDependencies({
                 await resolvedBootstrap.clear();
                 await resolvedMachineController.clear();
                 await resolvedDetailController.clear();
+                await resolvedReplenishmentController.clear();
               }
             : null,
       );
@@ -237,10 +300,10 @@ AppDependencies testDependencies({
     localStorage: localStorage ?? MemoryLocalStorage(),
     secureStorage: secureStorage ?? MemorySecureStorage(),
     apiClient: apiClient ?? _UnusedApiClient(),
-    requestIdGenerator: requestIdGenerator ?? UuidRequestIdGenerator(),
+    requestIdGenerator: resolvedRequestIds,
     connectivityService:
         connectivityService ?? const UnsupportedConnectivityService(),
-    locationService: locationService ?? const UnsupportedLocationService(),
+    locationService: resolvedLocation,
     barcodeScanner: barcodeScanner ?? const UnsupportedBarcodeScanner(),
     googleSignInService: resolvedGoogleSignIn,
     sessionService: resolvedSession,
@@ -251,6 +314,8 @@ AppDependencies testDependencies({
     machineDetailService: resolvedDetailService,
     machineSlotService: resolvedSlotService,
     machineDetailController: resolvedDetailController,
+    replenishmentService: resolvedReplenishment,
+    replenishmentCreationController: resolvedReplenishmentController,
     authenticationController: resolvedAuthController,
     clock: resolvedClock,
   );
@@ -342,6 +407,21 @@ final class FixedRequestIdGenerator implements RequestIdGenerator {
 
   @override
   String next() => value;
+}
+
+final class SequenceRequestIdGenerator implements RequestIdGenerator {
+  SequenceRequestIdGenerator(this.values);
+
+  final List<String> values;
+  var index = 0;
+
+  @override
+  String next() {
+    if (index >= values.length) {
+      throw StateError('SequenceRequestIdGenerator exhausted');
+    }
+    return values[index++];
+  }
 }
 
 /// Deterministic Google Sign-In double for unit/widget/integration tests.
@@ -585,6 +665,46 @@ final class FakeMachineSlotService implements MachineSlotService {
       throw Exception('$failure');
     }
     return List<MachineSlot>.from(slots);
+  }
+}
+
+final class FakeReplenishmentService implements ReplenishmentService {
+  FakeReplenishmentService({this.replenishment, this.error, this.pending});
+
+  Replenishment? replenishment;
+  Object? error;
+  Future<void>? pending;
+  var callCount = 0;
+  final machineIds = <String>[];
+  final idempotencyKeys = <String>[];
+  DeviceLocation? lastLocation;
+
+  @override
+  Future<Replenishment> createReplenishment({
+    required String machineId,
+    required DeviceLocation location,
+    required String idempotencyKey,
+  }) async {
+    callCount += 1;
+    machineIds.add(machineId);
+    idempotencyKeys.add(idempotencyKey);
+    lastLocation = location;
+    final gate = pending;
+    if (gate != null) {
+      await gate;
+    }
+    final failure = error;
+    if (failure != null) {
+      if (failure is Exception) {
+        throw failure;
+      }
+      throw Exception('$failure');
+    }
+    return replenishment ??
+        fakeReplenishment(
+          machineId: machineId,
+          idempotencyKey: idempotencyKey,
+        );
   }
 }
 
