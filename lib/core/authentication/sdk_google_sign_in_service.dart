@@ -43,7 +43,14 @@ final class SdkGoogleSignInService implements GoogleSignInService {
       final account = await _googleSignIn.authenticate();
       final result = _toResult(account);
       _current = result;
-      logger.info('authentication_succeeded', context: {'email': result.email});
+      logger.info(
+        'authentication_succeeded',
+        context: {
+          'email': result.email,
+          // Opaque Google subject used by Vending operator seeding (not the id_token).
+          'googleSubject': account.id,
+        },
+      );
       return result;
     } on AuthenticationException {
       rethrow;
@@ -133,9 +140,16 @@ final class SdkGoogleSignInService implements GoogleSignInService {
     GoogleSignInException error,
     StackTrace stackTrace,
   ) {
+    final providerContext = <String, Object?>{
+      'providerCode': error.code.name,
+      // Credential Manager often reports OAuth misconfig as "canceled".
+      'description': error.description,
+      'details': error.details?.toString(),
+    };
+
     switch (error.code) {
       case GoogleSignInExceptionCode.canceled:
-        logger.info('authentication_cancelled');
+        logger.info('authentication_cancelled', context: providerContext);
         return AuthenticationCancelled(cause: error);
       case GoogleSignInExceptionCode.interrupted:
       case GoogleSignInExceptionCode.uiUnavailable:
@@ -143,7 +157,7 @@ final class SdkGoogleSignInService implements GoogleSignInService {
           'authentication_failed',
           error: error,
           stackTrace: stackTrace,
-          context: {'providerCode': error.code.name},
+          context: providerContext,
         );
         return AuthenticationProviderUnavailable(
           message: 'Google Sign-In UI is unavailable',
@@ -157,7 +171,7 @@ final class SdkGoogleSignInService implements GoogleSignInService {
           'authentication_failed',
           error: error,
           stackTrace: stackTrace,
-          context: {'providerCode': error.code.name},
+          context: providerContext,
         );
         return AuthenticationFailed('Google Sign-In failed', cause: error);
     }

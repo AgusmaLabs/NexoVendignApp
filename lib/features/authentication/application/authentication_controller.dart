@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
 
 import '../../../core/authentication/authentication_exception.dart';
@@ -64,10 +66,15 @@ final class AuthenticationController extends ChangeNotifier {
     _setState(const Authenticating());
     logger.info('authentication_started');
 
+    String? googleSubject;
     try {
       final googleResult = await googleSignInService.signIn();
+      googleSubject = _opaqueGoogleSubject(googleResult.idToken);
       _setState(const CreatingSession());
-      logger.info('session_exchange_started');
+      logger.info(
+        'session_exchange_started',
+        context: {'googleSubject': googleSubject},
+      );
 
       final session = await sessionService.createSession(
         googleResult: googleResult,
@@ -93,7 +100,10 @@ final class AuthenticationController extends ChangeNotifier {
       logger.error(
         'session_failed',
         error: error,
-        context: {'type': error.runtimeType.toString()},
+        context: {
+          'type': error.runtimeType.toString(),
+          'googleSubject': googleSubject,
+        },
       );
       _setState(SessionFailure(_sessionMessage(error)));
     } catch (error, stackTrace) {
@@ -108,6 +118,27 @@ final class AuthenticationController extends ChangeNotifier {
         ),
       );
     }
+  }
+
+  /// Decodes the opaque Google `sub` claim without logging the id_token.
+  static String? _opaqueGoogleSubject(String idToken) {
+    final parts = idToken.split('.');
+    if (parts.length < 2) {
+      return null;
+    }
+    try {
+      final normalized = base64Url.normalize(parts[1]);
+      final payload = jsonDecode(utf8.decode(base64Url.decode(normalized)));
+      if (payload is Map && payload['sub'] is String) {
+        final sub = (payload['sub'] as String).trim();
+        return sub.isEmpty ? null : sub;
+      }
+    } on FormatException {
+      return null;
+    } on ArgumentError {
+      return null;
+    }
+    return null;
   }
 
   Future<void> signOut() async {

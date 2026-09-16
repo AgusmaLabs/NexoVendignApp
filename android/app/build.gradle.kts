@@ -36,6 +36,14 @@ android {
             signingConfig = signingConfigs.getByName("debug")
         }
     }
+
+    packaging {
+        jniLibs {
+            // Ensure .so are extracted on emulator install (avoids ClassNotFound on MainActivity
+            // when native Flutter libs fail to map from the APK).
+            useLegacyPackaging = true
+        }
+    }
 }
 
 kotlin {
