@@ -3,10 +3,12 @@
 ## Purpose
 
 Scan or type a barcode and resolve the catalog product from NexoVending.
-Does **not** add a replenishment line.
+When the barcode is unknown, continue the cascade: retry → text search →
+PENDING line with manual description (Commit 11).
 
 ```text
 Product catalog authority = NexoVending
+UnresolvedProduct ≠ Product
 ```
 
 ## Preconditions
@@ -22,58 +24,57 @@ Without an active replenishment the lookup UI is blocked.
 
 ## API
 
+### Barcode lookup
+
 ```http
 GET /api/v1/products/barcode/{barcode}
 Authorization: Bearer <session-jwt>
 X-Request-Id: <request-id>
 ```
 
-### Response (`ProductOut`) → **200**
+### Catalog text search (after 404 + retry)
 
-```json
-{
-  "product_id": "…",
-  "barcode": "7801234567890",
-  "name": "Coca Cola 350 ml",
-  "status": "ACTIVE",
-  "unit": "CAN"
-}
+```http
+GET /api/v1/products?q={text}&limit={n}&offset={n}
+Authorization: Bearer <session-jwt>
 ```
 
-### Errors
+**200** returns `ProductOut[]`. An empty list is success (not an error).
+Search never creates products.
 
-| Status | App handling |
-| ------ | ------------ |
-| 401 | Clear session → login |
-| 403 | Access denied |
-| 404 | Product not found (not create) |
-| 422 | Invalid barcode |
-| 429 | Rate limited |
-| 5xx / network | Recoverable + retry |
-
-## Flow
+## Cascade
 
 ```text
-Current Replenishment
-        ↓
 Scan / Manual barcode
         ↓
-ProductLookupService.lookupByBarcode
+lookupByBarcode
         ↓
-Found | NotFound | Failure
+Found → add RESOLVED line
+        ↓
+NotFound → retry
+        ↓
+searchByText (GET /products?q=)
+        ↓
+Select product → Found → RESOLVED line
+        ↓
+Empty / discard → UnresolvedProduct
+        ↓
+POST line PENDING (manual_description, product_id null)
 ```
 
-## Model
+## Models
 
-`Product` mirrors `ProductOut`. UI `description` maps to backend `name`.
-Equality is by `product_id`.
+* `Product` — catalog identity (`ProductOut`).
+* `UnresolvedProduct` — operational snapshot for PENDING (`manual_description` + optional barcode). Not a catalog product.
 
 ## States
 
 ```text
 Idle → Scanning → LookingUp → Found
 LookingUp → NotFound
-LookingUp → Failure
+NotFound → SearchingByDescription → SearchResults | SearchEmpty
+SearchEmpty / NotFound → EnteringManualDescription → UnresolvedReady
+LookingUp / Searching → Failure
 ```
 
 ## Scanner
@@ -83,22 +84,22 @@ LookingUp → Failure
 * Manual entry uses the same `lookupByBarcode` path
 * Cancelled scan (`null`) performs no HTTP
 
-## Limits (this commit)
+## Limits
 
-* No replenishment lines
-* No quantity / slot
-* No inventory mutation
-* No local catalog
-* No product creation
+* Does not create catalog products
+* Does not invent `product_id`
+* Does not run admin resolve / pending queue UI
 
 ## Security
 
 * Session JWT only via ApiClient Bearer
 * Google `id_token` never sent
-* No client `tenant_id` on lookup
+* No client `tenant_id` on lookup/search
 
 ## Related
 
 * [REPLENISHMENT.md](REPLENISHMENT.md)
+* [REPLENISHMENT_LINES.md](REPLENISHMENT_LINES.md)
 * [ADR-008](adr/ADR-008-product-catalog-authority.md)
+* [ADR-010](adr/ADR-010-unresolved-product-cascade.md)
 * [Mobile API Contract](nexovending_API/Mobile_API_Contract_NexoVending.md)

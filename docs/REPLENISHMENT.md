@@ -125,7 +125,8 @@ Create / add-line do **not**:
 
 ## Next step
 
-Unresolved product workflow (Commit 11), then review / completion.
+Review / completion / cancellation (later commits). Unresolved PENDING lines are
+supported via the product cascade (Commit 11).
 
 ## Security
 
@@ -141,4 +142,5 @@ Unresolved product workflow (Commit 11), then review / completion.
 * [REPLENISHMENT_LINES.md](REPLENISHMENT_LINES.md)
 * [ADR-007](adr/ADR-007-replenishment-creation.md)
 * [ADR-009](adr/ADR-009-replenishment-line-authority.md)
+* [ADR-010](adr/ADR-010-unresolved-product-cascade.md)
 * [Mobile API Contract](nexovending_API/Mobile_API_Contract_NexoVending.md)

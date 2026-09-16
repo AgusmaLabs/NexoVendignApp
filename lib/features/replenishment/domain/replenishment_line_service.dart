@@ -4,13 +4,16 @@ import 'replenishment.dart';
 abstract interface class ReplenishmentLineService {
   /// `POST /api/v1/replenishments/{id}/lines` → updated `ReplenishmentOut`.
   ///
-  /// Current contract requires [slotId].
+  /// Resolved: pass [productId].
+  /// Pending: omit [productId], require [manualDescription] (and optional [barcode]).
   Future<Replenishment> addLine({
     required String replenishmentId,
-    required String productId,
     required int quantity,
     required String slotId,
     required String idempotencyKey,
+    String? productId,
+    String? barcode,
+    String? manualDescription,
     String? replacementReason,
   });
 }

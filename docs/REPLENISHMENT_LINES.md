@@ -2,8 +2,8 @@
 
 ## Purpose
 
-Add a resolved product from barcode lookup to the current replenishment as a
-capture line (product + quantity + required slot).
+Add a line to the current replenishment: either a **RESOLVED** catalog product
+or a **PENDING** unresolved observation (`manual_description`).
 
 ```text
 Creating a replenishment line does not modify inventory.
@@ -16,7 +16,7 @@ Authenticated Session
 Current Operator
 Current Machine
 Current Replenishment (IN_PROGRESS)
-Product (from lookup)
+Product (from lookup/search)  OR  UnresolvedProduct (after cascade)
 Machine slots (from machine detail)
 ```
 
@@ -40,9 +40,7 @@ Idempotency-Key: <operation-key>
 X-Request-Id: <request-id>
 ```
 
-### Request (`AddReplenishmentLineRequest`)
-
-Current public contract requires:
+### RESOLVED
 
 ```json
 {
@@ -52,7 +50,20 @@ Current public contract requires:
 }
 ```
 
+### PENDING
+
+```json
+{
+  "slot_id": "slot-A01",
+  "quantity": 5,
+  "barcode": "123456789",
+  "manual_description": "Bebida energética X",
+  "product_id": null
+}
+```
+
 `tenant_id` / `operator_id` are **not** sent — Session JWT is authority.
+PENDING lines omit `replacement_reason`.
 
 ### Response → **200** `ReplenishmentOut`
 
@@ -61,7 +72,7 @@ The full replenishment (including updated `lines`) replaces Current Replenishmen
 ## Flow
 
 ```text
-Product Lookup (found)
+Product Lookup Found  OR  UnresolvedReady
         ↓
 Quantity
         ↓
@@ -126,8 +137,11 @@ Does **not** implement:
 * complete / cancel replenishment;
 * edit / delete line (no public endpoints used);
 * local inventory mutation;
-* unresolved-product workflow;
-* offline sync.
+* offline sync;
+* admin resolve of pending product lines.
+
+Supports RESOLVED lines (known `product_id`) and PENDING lines
+(`manual_description`, `product_id` null) after the Commit 11 cascade.
 
 ## Related
 
@@ -135,4 +149,5 @@ Does **not** implement:
 * [PRODUCT_LOOKUP.md](PRODUCT_LOOKUP.md)
 * [MACHINE_DETAIL.md](MACHINE_DETAIL.md)
 * [ADR-009](adr/ADR-009-replenishment-line-authority.md)
+* [ADR-010](adr/ADR-010-unresolved-product-cascade.md)
 * [Mobile API Contract](nexovending_API/Mobile_API_Contract_NexoVending.md)

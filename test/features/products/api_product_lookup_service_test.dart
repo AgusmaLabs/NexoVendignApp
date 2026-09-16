@@ -171,4 +171,71 @@ void main() {
     expect(paths.any((p) => p.contains('inventory')), isFalse);
     expect(paths.any((p) => p.contains('lines')), isFalse);
   });
+
+  test('GET /products?q= returns Product list', () async {
+    late http.Request captured;
+    final service = build(
+      MockClient((request) async {
+        captured = request;
+        return http.Response(
+          jsonEncode([productJson()]),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final products = await service.searchByText('coca');
+
+    expect(captured.method, 'GET');
+    expect(captured.url.path, '/api/v1/products');
+    expect(captured.url.queryParameters['q'], 'coca');
+    expect(captured.url.queryParameters['limit'], '20');
+    expect(captured.url.queryParameters['offset'], '0');
+    expect(captured.headers['authorization'], 'Bearer test-session-token');
+    expect(products, hasLength(1));
+    expect(products.single.name, 'Coca Cola 350 ml');
+  });
+
+  test('empty search list is success', () async {
+    final service = build(
+      MockClient(
+        (_) async => http.Response(
+          '[]',
+          200,
+          headers: {'content-type': 'application/json'},
+        ),
+      ),
+    );
+
+    final products = await service.searchByText('zzzz');
+    expect(products, isEmpty);
+  });
+
+  test('blank search query rejects without HTTP', () async {
+    var calls = 0;
+    final service = build(
+      MockClient((_) async {
+        calls += 1;
+        return http.Response('[]', 200);
+      }),
+    );
+
+    expect(
+      () => service.searchByText('  '),
+      throwsA(isA<ProductSearchQueryInvalid>()),
+    );
+    expect(calls, 0);
+  });
+
+  test('search 422 maps to ProductSearchQueryInvalid', () async {
+    final service = build(
+      MockClient((_) async => http.Response('bad', 422)),
+    );
+
+    expect(
+      () => service.searchByText('ok'),
+      throwsA(isA<ProductSearchQueryInvalid>()),
+    );
+  });
 }

@@ -1,6 +1,6 @@
 # VendingApp Architecture
 
-**Status:** Replenishment lines (Commit 10)
+**Status:** Unresolved product workflow (Commit 11)
 **Client:** Flutter
 **Backend:** NexoVending public HTTP API
 
@@ -40,6 +40,8 @@ Current Replenishment
       ↓
 Product Lookup
       ↓
+Catalog search / Unresolved PENDING
+      ↓
 Replenishment Lines
       ↓
 Completion
@@ -55,6 +57,10 @@ Inventory Movement
 Product Lookup
         ≠
 Replenishment Line
+
+UnresolvedProduct
+        ≠
+Product
 
 Replenishment Line
         ≠
@@ -152,4 +158,5 @@ Replenishment Line
 * [ADR-007](adr/ADR-007-replenishment-creation.md)
 * [ADR-008](adr/ADR-008-product-catalog-authority.md)
 * [ADR-009](adr/ADR-009-replenishment-line-authority.md)
+* [ADR-010](adr/ADR-010-unresolved-product-cascade.md)
 * [Product requirements](PRD.md)

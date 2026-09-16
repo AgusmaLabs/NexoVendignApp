@@ -42,6 +42,7 @@ See:
 * [docs/adr/ADR-006-machine-detail-and-slots.md](docs/adr/ADR-006-machine-detail-and-slots.md)
 * [docs/adr/ADR-007-replenishment-creation.md](docs/adr/ADR-007-replenishment-creation.md)
 * [docs/adr/ADR-008-product-catalog-authority.md](docs/adr/ADR-008-product-catalog-authority.md)
+* [docs/adr/ADR-010-unresolved-product-cascade.md](docs/adr/ADR-010-unresolved-product-cascade.md)
 
 ## Tooling
 
@@ -87,12 +88,12 @@ Supported `APP_ENV` values: `development`, `staging`, `production`.
 | Replenishment Creation | ✅ |
 | Product Lookup | ✅ |
 | Replenishment Lines | ✅ |
-| Unresolved Product | ⏳ |
+| Unresolved Product | ✅ |
 | Review | ⏳ |
 | Completion | ⏳ |
 | Cancellation | ⏳ |
 
-Implemented through Commit 10:
+Implemented through Commit 11:
 
 * application shell and infrastructure;
 * Google Sign-In → Session JWT → SecureStorage;
@@ -101,6 +102,8 @@ Implemented through Commit 10:
 * machine detail + physical slots;
 * replenishment creation via `POST /api/v1/replenishments`;
 * barcode product lookup via `GET /api/v1/products/barcode/{barcode}` (+ camera / manual);
-* replenishment lines via `POST /api/v1/replenishments/{id}/lines` (quantity + required slot).
+* catalog text search via `GET /api/v1/products?q=`;
+* replenishment lines via `POST /api/v1/replenishments/{id}/lines` (RESOLVED + PENDING);
+* unresolved product cascade (barcode → retry → search → PENDING `manual_description`).
 
-Unresolved product, review, completion, and cancellation arrive in subsequent commits.
+Review, completion, and cancellation arrive in subsequent commits.

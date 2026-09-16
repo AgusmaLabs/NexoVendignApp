@@ -6,13 +6,14 @@ import '../../../core/networking/request_id.dart';
 import '../../machine/application/machine_detail_controller.dart';
 import '../../machine/domain/machine_slot.dart';
 import '../../products/domain/product.dart';
+import '../../products/domain/unresolved_product.dart';
 import '../domain/replenishment_exception.dart';
 import '../domain/replenishment_line.dart';
 import '../domain/replenishment_line_service.dart';
 import 'replenishment_add_line_state.dart';
 import 'replenishment_creation_controller.dart';
 
-/// Captures quantity + slot and posts a replenishment line.
+/// Captures quantity + slot and posts a replenishment line (resolved or PENDING).
 final class ReplenishmentAddLineController extends ChangeNotifier {
   ReplenishmentAddLineController({
     required this.lineService,
@@ -34,6 +35,7 @@ final class ReplenishmentAddLineController extends ChangeNotifier {
 
   ReplenishmentAddLineState _state = const ReplenishmentAddLineIdle();
   Product? _product;
+  UnresolvedProduct? _unresolved;
   String? _barcode;
   String? _selectedSlotId;
   int? _quantity;
@@ -44,7 +46,11 @@ final class ReplenishmentAddLineController extends ChangeNotifier {
 
   Product? get product => _product;
 
-  String? get barcode => _barcode;
+  UnresolvedProduct? get unresolved => _unresolved;
+
+  bool get isPendingProduct => _unresolved != null && _product == null;
+
+  String? get barcode => _barcode ?? _unresolved?.barcode;
 
   String? get selectedSlotId => _selectedSlotId;
 
@@ -63,7 +69,19 @@ final class ReplenishmentAddLineController extends ChangeNotifier {
 
   void beginWithProduct(Product product, {String? barcode}) {
     _product = product;
+    _unresolved = null;
     _barcode = barcode;
+    _selectedSlotId = null;
+    _quantity = null;
+    _idempotencyKey = null;
+    _addGeneration += 1;
+    _setState(const ReplenishmentAddLineIdle());
+  }
+
+  void beginWithUnresolved(UnresolvedProduct unresolved) {
+    _product = null;
+    _unresolved = unresolved;
+    _barcode = unresolved.barcode;
     _selectedSlotId = null;
     _quantity = null;
     _idempotencyKey = null;
@@ -101,7 +119,8 @@ final class ReplenishmentAddLineController extends ChangeNotifier {
     }
 
     final product = _product;
-    if (product == null) {
+    final unresolved = _unresolved;
+    if (product == null && unresolved == null) {
       _setState(
         const ReplenishmentAddLineValidationFailure(
           'Selecciona un producto antes de agregar la línea.',
@@ -120,7 +139,6 @@ final class ReplenishmentAddLineController extends ChangeNotifier {
       return;
     }
 
-    // Current NexoVending contract requires slot_id on every line.
     final slotId = _selectedSlotId?.trim();
     if (slotId == null || slotId.isEmpty) {
       _setState(
@@ -150,10 +168,12 @@ final class ReplenishmentAddLineController extends ChangeNotifier {
       final previousIds = replenishment.lines.map((line) => line.id).toSet();
       final updated = await lineService.addLine(
         replenishmentId: replenishment.id,
-        productId: product.productId,
         quantity: quantity,
         slotId: slotId,
         idempotencyKey: key,
+        productId: product?.productId,
+        barcode: unresolved?.barcode ?? _barcode,
+        manualDescription: unresolved?.manualDescription,
       );
       if (generation != _addGeneration) {
         return;
@@ -235,6 +255,7 @@ final class ReplenishmentAddLineController extends ChangeNotifier {
   void prepareForNextLine() {
     _addGeneration += 1;
     _product = null;
+    _unresolved = null;
     _barcode = null;
     _selectedSlotId = null;
     _quantity = null;
@@ -245,6 +266,7 @@ final class ReplenishmentAddLineController extends ChangeNotifier {
   Future<void> clear() async {
     _addGeneration += 1;
     _product = null;
+    _unresolved = null;
     _barcode = null;
     _selectedSlotId = null;
     _quantity = null;

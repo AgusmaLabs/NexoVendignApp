@@ -275,4 +275,77 @@ void main() {
       throwsA(isA<ReplenishmentNetworkFailure>()),
     );
   });
+
+  test('PENDING line posts product_id null with manual_description', () async {
+    late http.Request captured;
+    final service = build(
+      MockClient((request) async {
+        captured = request;
+        return http.Response(
+          jsonEncode(
+            replenishmentJson(
+              lines: [
+                {
+                  'id': 'line-pending',
+                  'slot_id': 'slot-A01',
+                  'product_id': null,
+                  'quantity': 5,
+                  'unit_price': '0.00',
+                  'occurred_at': '2026-09-15T12:05:00+00:00',
+                  'product_description_snapshot': 'Bebida energética X',
+                  'resolution_status': 'pending_product_resolution',
+                  'barcode_scanned': '123456789',
+                  'manual_description': 'Bebida energética X',
+                },
+              ],
+            ),
+          ),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final replenishment = await service.addLine(
+      replenishmentId: 'rep-1',
+      quantity: 5,
+      slotId: 'slot-A01',
+      idempotencyKey: 'idem-pending',
+      barcode: '123456789',
+      manualDescription: 'Bebida energética X',
+    );
+
+    final body = jsonDecode(captured.body) as Map<String, Object?>;
+    expect(body.containsKey('product_id'), isTrue);
+    expect(body['product_id'], isNull);
+    expect(body['manual_description'], 'Bebida energética X');
+    expect(body['barcode'], '123456789');
+    expect(body.containsKey('replacement_reason'), isFalse);
+    expect(replenishment.lines.single.productId, isNull);
+    expect(
+      replenishment.lines.single.resolutionStatus,
+      'pending_product_resolution',
+    );
+  });
+
+  test('PENDING without manual_description rejects without HTTP', () async {
+    var calls = 0;
+    final service = build(
+      MockClient((request) async {
+        calls += 1;
+        return http.Response('{}', 200);
+      }),
+    );
+
+    expect(
+      () => service.addLine(
+        replenishmentId: 'rep-1',
+        quantity: 1,
+        slotId: 'slot-A01',
+        idempotencyKey: 'k',
+      ),
+      throwsA(isA<ReplenishmentValidationFailed>()),
+    );
+    expect(calls, 0);
+  });
 }

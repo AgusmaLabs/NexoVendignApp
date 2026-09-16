@@ -18,25 +18,24 @@ final class ApiReplenishmentLineService implements ReplenishmentLineService {
   @override
   Future<Replenishment> addLine({
     required String replenishmentId,
-    required String productId,
     required int quantity,
     required String slotId,
     required String idempotencyKey,
+    String? productId,
+    String? barcode,
+    String? manualDescription,
     String? replacementReason,
   }) async {
     final repId = replenishmentId.trim();
-    final prodId = productId.trim();
     final slot = slotId.trim();
     final key = idempotencyKey.trim();
+    final prodId = productId?.trim();
+    final manual = manualDescription?.trim();
+    final scanned = barcode?.trim();
 
     if (repId.isEmpty) {
       throw const ReplenishmentValidationFailed(
         message: 'Falta el identificador de la reposición.',
-      );
-    }
-    if (prodId.isEmpty) {
-      throw const ReplenishmentValidationFailed(
-        message: 'Falta el identificador del producto.',
       );
     }
     if (slot.isEmpty) {
@@ -51,13 +50,32 @@ final class ApiReplenishmentLineService implements ReplenishmentLineService {
       );
     }
 
+    final isPending = prodId == null || prodId.isEmpty;
+    if (isPending) {
+      if (manual == null || manual.isEmpty) {
+        throw const ReplenishmentValidationFailed(
+          message: 'Ingresa una descripción del producto.',
+        );
+      }
+      if (replacementReason != null && replacementReason.trim().isNotEmpty) {
+        throw const ReplenishmentValidationFailed(
+          message: 'Una línea pendiente no admite motivo de reemplazo.',
+        );
+      }
+    }
+
     logger.info('replenishment_add_line_started');
     try {
       final body = <String, Object?>{
         'slot_id': slot,
         'quantity': quantity,
-        'product_id': prodId,
-        if (replacementReason != null && replacementReason.trim().isNotEmpty)
+        if (!isPending) 'product_id': prodId,
+        if (isPending) 'product_id': null,
+        if (isPending) 'manual_description': manual,
+        if (scanned != null && scanned.isNotEmpty) 'barcode': scanned,
+        if (!isPending &&
+            replacementReason != null &&
+            replacementReason.trim().isNotEmpty)
           'replacement_reason': replacementReason.trim(),
       };
       final response = await apiClient.post(
@@ -74,6 +92,7 @@ final class ApiReplenishmentLineService implements ReplenishmentLineService {
           'replenishmentId': replenishment.id,
           'lineCount': replenishment.lines.length,
           'status': replenishment.status,
+          'pending': isPending,
         },
       );
       return replenishment;

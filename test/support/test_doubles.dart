@@ -168,6 +168,8 @@ ReplenishmentLine fakeReplenishmentLine({
   String occurredAt = '2026-09-15T12:05:00+00:00',
   String productDescriptionSnapshot = 'Coca Cola 350 ml',
   String resolutionStatus = 'RESOLVED',
+  String? barcodeScanned,
+  String? manualDescription,
 }) {
   return ReplenishmentLine(
     id: id,
@@ -178,6 +180,8 @@ ReplenishmentLine fakeReplenishmentLine({
     occurredAt: occurredAt,
     productDescriptionSnapshot: productDescriptionSnapshot,
     resolutionStatus: resolutionStatus,
+    barcodeScanned: barcodeScanned,
+    manualDescription: manualDescription,
   );
 }
 
@@ -815,7 +819,9 @@ final class FakeReplenishmentLineService implements ReplenishmentLineService {
   Future<void>? pending;
   var callCount = 0;
   final replenishmentIds = <String>[];
-  final productIds = <String>[];
+  final productIds = <String?>[];
+  final manualDescriptions = <String?>[];
+  final barcodes = <String?>[];
   final quantities = <int>[];
   final slotIds = <String>[];
   final idempotencyKeys = <String>[];
@@ -823,15 +829,19 @@ final class FakeReplenishmentLineService implements ReplenishmentLineService {
   @override
   Future<Replenishment> addLine({
     required String replenishmentId,
-    required String productId,
     required int quantity,
     required String slotId,
     required String idempotencyKey,
+    String? productId,
+    String? barcode,
+    String? manualDescription,
     String? replacementReason,
   }) async {
     callCount += 1;
     replenishmentIds.add(replenishmentId);
     productIds.add(productId);
+    barcodes.add(barcode);
+    manualDescriptions.add(manualDescription);
     quantities.add(quantity);
     slotIds.add(slotId);
     idempotencyKeys.add(idempotencyKey);
@@ -849,11 +859,20 @@ final class FakeReplenishmentLineService implements ReplenishmentLineService {
     final base =
         replenishment ??
         fakeReplenishment(id: replenishmentId, version: 2);
+    final isPending = productId == null || productId.trim().isEmpty;
     final line = fakeReplenishmentLine(
       id: 'line-${base.lines.length + 1}',
       slotId: slotId,
-      productId: productId,
+      productId: isPending ? null : productId,
       quantity: quantity,
+      barcodeScanned: barcode,
+      manualDescription: manualDescription,
+      resolutionStatus: isPending
+          ? 'pending_product_resolution'
+          : 'resolved',
+      productDescriptionSnapshot: isPending
+          ? (manualDescription ?? 'Pending')
+          : 'Product',
     );
     return fakeReplenishment(
       id: base.id,
@@ -874,13 +893,23 @@ final class FakeReplenishmentLineService implements ReplenishmentLineService {
 }
 
 final class FakeProductLookupService implements ProductLookupService {
-  FakeProductLookupService({this.product, this.error, this.pending});
+  FakeProductLookupService({
+    this.product,
+    this.error,
+    this.pending,
+    this.searchResults,
+    this.searchError,
+  });
 
   Product? product;
   Object? error;
   Future<void>? pending;
+  List<Product>? searchResults;
+  Object? searchError;
   var callCount = 0;
+  var searchCallCount = 0;
   final barcodes = <String>[];
+  final searchQueries = <String>[];
 
   @override
   Future<Product> lookupByBarcode(String barcode) async {
@@ -898,6 +927,28 @@ final class FakeProductLookupService implements ProductLookupService {
       throw Exception('$failure');
     }
     return product ?? fakeProduct(barcode: barcode);
+  }
+
+  @override
+  Future<List<Product>> searchByText(
+    String query, {
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    searchCallCount += 1;
+    searchQueries.add(query);
+    final gate = pending;
+    if (gate != null) {
+      await gate;
+    }
+    final failure = searchError ?? error;
+    if (failure != null) {
+      if (failure is Exception) {
+        throw failure;
+      }
+      throw Exception('$failure');
+    }
+    return List<Product>.from(searchResults ?? const <Product>[]);
   }
 }
 

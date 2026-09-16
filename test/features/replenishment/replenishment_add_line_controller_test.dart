@@ -6,6 +6,7 @@ import 'package:vendingapp/core/time/clock.dart';
 import 'package:vendingapp/features/machine/application/machine_detail_controller.dart';
 import 'package:vendingapp/features/machine/application/machine_identification_controller.dart';
 import 'package:vendingapp/features/operator/application/operator_bootstrap_controller.dart';
+import 'package:vendingapp/features/products/domain/unresolved_product.dart';
 import 'package:vendingapp/features/replenishment/application/replenishment_add_line_controller.dart';
 import 'package:vendingapp/features/replenishment/application/replenishment_add_line_state.dart';
 import 'package:vendingapp/features/replenishment/application/replenishment_creation_controller.dart';
@@ -214,5 +215,26 @@ void main() {
 
     expect(controller.state, isA<ReplenishmentAddLineIdle>());
     expect(creationController.currentReplenishment?.lines, isEmpty);
+  });
+
+  test('pending line posts without product_id', () async {
+    controller.beginWithUnresolved(
+      UnresolvedProduct(
+        manualDescription: 'Bebida energética X',
+        barcode: '123456789',
+      ),
+    );
+    controller.selectSlot('slot-A01');
+    controller.setQuantity(5);
+    await controller.submit();
+
+    expect(controller.state, isA<ReplenishmentAddLineAdded>());
+    expect(lines.productIds.single, isNull);
+    expect(lines.manualDescriptions.single, 'Bebida energética X');
+    expect(lines.barcodes.single, '123456789');
+    final line = creationController.currentReplenishment!.lines.single;
+    expect(line.productId, isNull);
+    expect(line.resolutionStatus, 'pending_product_resolution');
+    expect(line.manualDescription, 'Bebida energética X');
   });
 }

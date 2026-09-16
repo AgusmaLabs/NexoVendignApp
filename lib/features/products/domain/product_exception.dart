@@ -13,6 +13,14 @@ final class ProductBarcodeInvalid extends ProductException {
   }) : super(message, cause: cause);
 }
 
+/// Empty / too-short text search query (no HTTP).
+final class ProductSearchQueryInvalid extends ProductException {
+  const ProductSearchQueryInvalid({
+    String message = 'Ingresa al menos 2 caracteres para buscar.',
+    Object? cause,
+  }) : super(message, cause: cause);
+}
+
 /// No active replenishment context (no HTTP).
 final class ProductNoReplenishment extends ProductException {
   const ProductNoReplenishment({

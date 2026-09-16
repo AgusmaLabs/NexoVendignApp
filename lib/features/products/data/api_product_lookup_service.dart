@@ -8,7 +8,7 @@ import '../domain/product.dart';
 import '../domain/product_exception.dart';
 import '../domain/product_lookup_service.dart';
 
-/// `ProductLookupService` backed by `GET /api/v1/products/barcode/{barcode}`.
+/// `ProductLookupService` backed by barcode lookup + catalog text search.
 final class ApiProductLookupService implements ProductLookupService {
   ApiProductLookupService({required this.apiClient, required this.logger});
 
@@ -56,6 +56,78 @@ final class ApiProductLookupService implements ProductLookupService {
     }
   }
 
+  @override
+  Future<List<Product>> searchByText(
+    String query, {
+    int limit = 20,
+    int offset = 0,
+  }) async {
+    final trimmed = query.trim();
+    if (trimmed.isEmpty) {
+      throw const ProductSearchQueryInvalid();
+    }
+    if (limit < 1 || limit > 50 || offset < 0) {
+      throw const ProductSearchQueryInvalid(
+        message: 'Parámetros de búsqueda inválidos.',
+      );
+    }
+
+    logger.info('product_search_started');
+    try {
+      final response = await apiClient.get(
+        '/api/v1/products',
+        authenticated: true,
+        queryParameters: <String, String>{
+          'q': trimmed,
+          'limit': '$limit',
+          'offset': '$offset',
+        },
+      );
+      final products = _decodeProductList(response.body);
+      logger.info(
+        'product_search_succeeded',
+        context: {'count': products.length},
+      );
+      return products;
+    } on ProductException {
+      rethrow;
+    } on HttpException catch (error) {
+      throw _mapSearchHttp(error);
+    } on TimeoutException catch (error) {
+      throw ProductNetworkFailure(
+        message: 'No fue posible buscar productos en este momento.',
+        cause: error,
+      );
+    } on NetworkException catch (error) {
+      throw ProductNetworkFailure(
+        message: 'No fue posible buscar productos en este momento.',
+        cause: error,
+      );
+    } on FormatException catch (error) {
+      throw ProductInvalidResponse(cause: error);
+    } on SerializationException catch (error) {
+      throw ProductInvalidResponse(cause: error);
+    } catch (error) {
+      throw ProductUnknownError(
+        message: 'No fue posible buscar productos en este momento.',
+        cause: error,
+      );
+    }
+  }
+
+  List<Product> _decodeProductList(String body) {
+    final decoded = jsonDecode(body);
+    if (decoded is! List) {
+      throw const FormatException('Product search response is not a JSON array');
+    }
+    return decoded.map((item) {
+      if (item is! Map) {
+        throw const FormatException('Product search item is not a JSON object');
+      }
+      return Product.fromJson(Map<String, Object?>.from(item));
+    }).toList(growable: false);
+  }
+
   Map<String, Object?> _decodeJsonObject(String body) {
     final decoded = jsonDecode(body);
     if (decoded is! Map) {
@@ -72,6 +144,22 @@ final class ApiProductLookupService implements ProductLookupService {
       422 => ProductBarcodeInvalid(cause: error),
       429 => ProductRateLimited(cause: error),
       _ => ProductUnknownError(cause: error),
+    };
+  }
+
+  ProductException _mapSearchHttp(HttpException error) {
+    return switch (error.statusCode) {
+      401 => ProductSessionExpired(cause: error),
+      403 => ProductAccessDenied(
+        message: 'No tienes acceso al catálogo de productos.',
+        cause: error,
+      ),
+      422 => ProductSearchQueryInvalid(cause: error),
+      429 => ProductRateLimited(cause: error),
+      _ => ProductUnknownError(
+        message: 'No fue posible buscar productos en este momento.',
+        cause: error,
+      ),
     };
   }
 }

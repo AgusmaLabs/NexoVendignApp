@@ -144,4 +144,66 @@ void main() {
     expect(sessions.clearCallCount, greaterThan(0));
     expect(expired, isTrue);
   });
+
+  test('search after not found returns results', () async {
+    products.error = const ProductNotFound(barcode: '7800000111111');
+    await controller.lookup('7800000111111');
+    products.error = null;
+    products.searchResults = [fakeProduct(name: 'Bebida X')];
+
+    await controller.searchByDescription('bebida');
+
+    expect(controller.state, isA<ProductLookupSearchResults>());
+    expect(products.searchCallCount, 1);
+    expect(products.searchQueries.single, 'bebida');
+  });
+
+  test('empty search becomes SearchEmpty', () async {
+    products.error = const ProductNotFound(barcode: '7800000111111');
+    await controller.lookup('7800000111111');
+    products.error = null;
+    products.searchResults = const [];
+
+    await controller.searchByDescription('zzzz');
+
+    expect(controller.state, isA<ProductLookupSearchEmpty>());
+  });
+
+  test('select search result becomes Found', () async {
+    final product = fakeProduct(productId: 'prod-search');
+    products.error = const ProductNotFound(barcode: '7800000111111');
+    await controller.lookup('7800000111111');
+    products.error = null;
+    products.searchResults = [product];
+    await controller.searchByDescription('coca');
+
+    controller.selectSearchResult(product);
+
+    expect(controller.state, isA<ProductLookupFound>());
+    expect(controller.lastFoundProduct?.productId, 'prod-search');
+  });
+
+  test('confirm manual description yields UnresolvedReady', () async {
+    products.error = const ProductNotFound(barcode: '7800000111111');
+    await controller.lookup('7800000111111');
+    controller.beginManualDescription();
+
+    final message = controller.confirmManualDescription('Bebida energética X');
+
+    expect(message, isNull);
+    expect(controller.state, isA<ProductLookupUnresolvedReady>());
+    expect(controller.lastUnresolved?.manualDescription, 'Bebida energética X');
+    expect(controller.lastUnresolved?.barcode, '7800000111111');
+  });
+
+  test('blank manual description is rejected', () async {
+    products.error = const ProductNotFound(barcode: '7800000111111');
+    await controller.lookup('7800000111111');
+    controller.beginManualDescription();
+
+    final message = controller.confirmManualDescription('   ');
+
+    expect(message, isNotNull);
+    expect(controller.state, isA<ProductLookupEnteringManualDescription>());
+  });
 }
