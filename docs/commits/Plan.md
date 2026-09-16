@@ -1,5 +1,7 @@
 
-> **Nota:** el commit habilitante `10b` (`feat(mobile): enable local backend connectivity for E2E verification`) vive fuera de esta numeración y no desplaza los commits 11–27. Ver [commit10b.md](commit10b.md) y [../E2E_LOCAL_RUN.md](../E2E_LOCAL_RUN.md).
+> **Nota:** los commits habilitantes `10b` (cleartext/E2E lab) y `10c` (flujo de
+> campo condensado) viven fuera de esta numeración y no desplazan los commits 11–27.
+> Ver [commit10b.md](commit10b.md), [../E2E_LOCAL_RUN.md](../E2E_LOCAL_RUN.md).
 
 | Estado | Commit | Concepto | Título | Breve descripción |
 | :---: | :---: | :------------------ | :--------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------ |
@@ -13,6 +15,7 @@
 | [x] | **8** | Reposición | `feat(mobile): implement replenishment creation` | Crear una reposición capturando máquina, timestamp y ubicación GPS mediante `POST /replenishments`. |
 | [x] | **9** | Reposición | `feat(mobile): implement barcode product lookup` | Integrar cámara/lector de código de barras y consulta de productos mediante la API. |
 | [x] | **10** | Reposición | `feat(mobile): implement replenishment lines` | Agregar productos, cantidades, slots, precios, timestamps y sustituciones a una reposición. |
+| [x] | **10c** | UX campo | `feat(mobile): condense replenishment field flow` | Colapsar identify/detail/start/lookup/add-line en: identificar+iniciar visita → pantalla única de líneas en loop. Fuera de la numeración 11–27. |
 | [ ] | **11** | Reposición | `feat(mobile): implement unresolved product workflow` | Implementar el flujo de producto no identificado mediante `PENDING_PRODUCT_RESOLUTION`, sin crear productos desde la aplicación. |
 | [ ] | **12** | Reposición | `feat(mobile): implement replenishment review` | Crear la pantalla de revisión de la operación antes de completarla, incluyendo líneas, cantidades, slots, sustituciones y pendientes. |
 | [ ] | **13** | Reposición | `feat(mobile): implement replenishment completion` | Completar la reposición mediante la API y mostrar el resultado de la operación y sus movimientos generados por backend. |

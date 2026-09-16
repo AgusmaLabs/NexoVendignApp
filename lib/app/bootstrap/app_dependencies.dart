@@ -35,6 +35,7 @@ import '../../features/products/data/api_product_lookup_service.dart';
 import '../../features/products/domain/product_lookup_service.dart';
 import '../../features/replenishment/application/replenishment_add_line_controller.dart';
 import '../../features/replenishment/application/replenishment_creation_controller.dart';
+import '../../features/replenishment/application/visit_start_controller.dart';
 import '../../features/replenishment/data/api_replenishment_line_service.dart';
 import '../../features/replenishment/data/api_replenishment_service.dart';
 import '../../features/replenishment/domain/replenishment_line_service.dart';
@@ -65,6 +66,7 @@ final class AppDependencies {
     required this.machineDetailController,
     required this.replenishmentService,
     required this.replenishmentCreationController,
+    required this.visitStartController,
     required this.replenishmentLineService,
     required this.replenishmentAddLineController,
     required this.productLookupService,
@@ -95,6 +97,7 @@ final class AppDependencies {
   final MachineDetailController machineDetailController;
   final ReplenishmentService replenishmentService;
   final ReplenishmentCreationController replenishmentCreationController;
+  final VisitStartController visitStartController;
   final ReplenishmentLineService replenishmentLineService;
   final ReplenishmentAddLineController replenishmentAddLineController;
   final ProductLookupService productLookupService;
@@ -215,6 +218,13 @@ final class AppDependencies {
       logger: logger,
       onSessionExpired: () => authenticationController.handleSessionExpired(),
     );
+    final visitStartController = VisitStartController(
+      machineIdentificationController: machineIdentificationController,
+      machineDetailController: machineDetailController,
+      replenishmentCreationController: replenishmentCreationController,
+      operatorBootstrapController: operatorBootstrapController,
+      logger: logger,
+    );
 
     final googleSignInConfig = GoogleSignInConfig.fromEnvironment(
       config.environment,
@@ -234,6 +244,7 @@ final class AppDependencies {
         await machineIdentificationController.clear();
         await machineDetailController.clear();
         await replenishmentCreationController.clear();
+        await visitStartController.clear();
         await replenishmentAddLineController.clear();
         await productLookupController.clear();
       },
@@ -262,6 +273,7 @@ final class AppDependencies {
       machineDetailController: machineDetailController,
       replenishmentService: replenishmentService,
       replenishmentCreationController: replenishmentCreationController,
+      visitStartController: visitStartController,
       replenishmentLineService: replenishmentLineService,
       replenishmentAddLineController: replenishmentAddLineController,
       productLookupService: productLookupService,

@@ -115,8 +115,8 @@ rebuild/restart the API.
 1. Backend up + seed with real `googleSubject` (after first login once).
 2. `pwsh -File scripts/run_e2e_android.ps1`
 3. Continuar con Google → operador listo.
-4. Identificar máquina → `MIX-001`.
-5. Iniciar reposición → producto `7800001` → cantidad → agregar línea.
+4. **Identificar e iniciar** → código `MIX-001` (resolve + slots + create in one step).
+5. En la misma pantalla de reposición: producto `7800001` → slot → cantidad → agregar línea → siguiente.
 6. Complete via HTTP (until Commit 13 UI exists):
 
 ```powershell
@@ -126,6 +126,15 @@ pwsh -File scripts/complete_replenishment.ps1 `
   -Subject <googleSubject>
 ```
 
+Primary field path (after this UX consolidation):
+
+```text
+Identificar máquina  →  Reposición (líneas en loop)
+```
+
+Legacy intermediate routes (`/machines/detail`, `/replenishments/start`,
+`/products/lookup`, `/replenishments/lines/add`) remain registered but are not
+part of the default operator path.
 ## Recreate AVD (only if corrupted)
 
 ```powershell

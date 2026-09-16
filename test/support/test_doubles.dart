@@ -32,6 +32,7 @@ import 'package:vendingapp/features/operator/domain/operator.dart';
 import 'package:vendingapp/features/operator/domain/operator_service.dart';
 import 'package:vendingapp/features/replenishment/application/replenishment_add_line_controller.dart';
 import 'package:vendingapp/features/replenishment/application/replenishment_creation_controller.dart';
+import 'package:vendingapp/features/replenishment/application/visit_start_controller.dart';
 import 'package:vendingapp/features/replenishment/domain/replenishment.dart';
 import 'package:vendingapp/features/replenishment/domain/replenishment_line.dart';
 import 'package:vendingapp/features/replenishment/domain/replenishment_line_service.dart';
@@ -253,6 +254,7 @@ AppDependencies testDependencies({
   MachineDetailController? machineDetailController,
   ReplenishmentService? replenishmentService,
   ReplenishmentCreationController? replenishmentCreationController,
+  VisitStartController? visitStartController,
   ReplenishmentLineService? replenishmentLineService,
   ReplenishmentAddLineController? replenishmentAddLineController,
   ProductLookupService? productLookupService,
@@ -351,6 +353,15 @@ AppDependencies testDependencies({
         logger: resolvedLogger,
         onSessionExpired: () => resolvedAuthController.handleSessionExpired(),
       );
+  final resolvedVisitStartController =
+      visitStartController ??
+      VisitStartController(
+        machineIdentificationController: resolvedMachineController,
+        machineDetailController: resolvedDetailController,
+        replenishmentCreationController: resolvedReplenishmentController,
+        operatorBootstrapController: resolvedBootstrap,
+        logger: resolvedLogger,
+      );
 
   resolvedAuthController =
       authenticationController ??
@@ -368,6 +379,7 @@ AppDependencies testDependencies({
                 await resolvedMachineController.clear();
                 await resolvedDetailController.clear();
                 await resolvedReplenishmentController.clear();
+                await resolvedVisitStartController.clear();
                 await resolvedAddLineController.clear();
                 await resolvedProductLookupController.clear();
               }
@@ -398,6 +410,7 @@ AppDependencies testDependencies({
     machineDetailController: resolvedDetailController,
     replenishmentService: resolvedReplenishment,
     replenishmentCreationController: resolvedReplenishmentController,
+    visitStartController: resolvedVisitStartController,
     replenishmentLineService: resolvedLineService,
     replenishmentAddLineController: resolvedAddLineController,
     productLookupService: resolvedProductLookup,

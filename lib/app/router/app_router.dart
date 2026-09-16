@@ -6,14 +6,16 @@ import '../../features/machine/presentation/machine_detail_page.dart';
 import '../../features/products/presentation/product_lookup_page.dart';
 import '../../features/replenishment/application/replenishment_add_line_state.dart';
 import '../../features/replenishment/presentation/replenishment_add_line_page.dart';
+import '../../features/replenishment/presentation/replenishment_line_entry_page.dart';
 import '../../features/replenishment/presentation/replenishment_start_page.dart';
 import '../bootstrap/app_dependencies.dart';
 import '../home/unknown_route_page.dart';
 
 /// Centralized navigation for VendingApp.
 ///
-/// Future routes should be registered here without changing the shell
-/// composition in [VendingApp].
+/// Field replenishment primary path:
+/// identify machine (starts visit) → line entry loop.
+/// Legacy intermediate routes remain registered for tests / recovery.
 abstract final class AppRouter {
   static const String homePath = '/';
   static const String loginPath = '/login';
@@ -22,6 +24,7 @@ abstract final class AppRouter {
   static const String replenishmentStartPath = '/replenishments/start';
   static const String productLookupPath = '/products/lookup';
   static const String replenishmentAddLinePath = '/replenishments/lines/add';
+  static const String replenishmentLineEntryPath = '/replenishments/lines';
 
   static Route<dynamic> onGenerateRoute(RouteSettings settings) {
     switch (settings.name) {
@@ -37,7 +40,20 @@ abstract final class AppRouter {
           builder: (context) {
             final deps = AppDependenciesScope.of(context);
             return IdentifyMachinePage(
-              controller: deps.machineIdentificationController,
+              controller: deps.visitStartController,
+              onSignOut: () => _signOut(context, deps),
+            );
+          },
+        );
+      case replenishmentLineEntryPath:
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) {
+            final deps = AppDependenciesScope.of(context);
+            return ReplenishmentLineEntryPage(
+              productLookupController: deps.productLookupController,
+              addLineController: deps.replenishmentAddLineController,
+              creationController: deps.replenishmentCreationController,
               onSignOut: () => _signOut(context, deps),
             );
           },
@@ -95,7 +111,7 @@ abstract final class AppRouter {
             if (args is! AddLineArgs) {
               return const UnknownRoutePage(
                 routeName: replenishmentAddLinePath,
-                homePath: productLookupPath,
+                homePath: replenishmentLineEntryPath,
               );
             }
             return ReplenishmentAddLinePage(
@@ -119,6 +135,7 @@ abstract final class AppRouter {
     deps.replenishmentAddLineController.clear();
     deps.productLookupController.clear();
     deps.replenishmentCreationController.clear();
+    deps.visitStartController.clear();
     deps.machineDetailController.clear();
     deps.machineIdentificationController.clear();
     deps.operatorBootstrapController.clear();

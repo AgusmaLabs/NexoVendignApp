@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/bootstrap/app_dependencies.dart';
-import '../application/machine_identification_controller.dart';
-import '../application/machine_identification_state.dart';
+import '../../../app/router/app_router.dart';
+import '../../replenishment/application/visit_start_controller.dart';
+import '../../replenishment/application/visit_start_state.dart';
 
-/// Minimal screen to resolve a machine by identifier.
+/// Scan/enter machine id → resolve + slots + create visit, then open line entry.
 class IdentifyMachinePage extends StatefulWidget {
-  const IdentifyMachinePage({super.key, this.controller, this.onSignOut});
+  const IdentifyMachinePage({
+    super.key,
+    this.controller,
+    this.onSignOut,
+  });
 
-  final MachineIdentificationController? controller;
+  final VisitStartController? controller;
   final VoidCallback? onSignOut;
 
   @override
@@ -17,6 +22,7 @@ class IdentifyMachinePage extends StatefulWidget {
 
 class _IdentifyMachinePageState extends State<IdentifyMachinePage> {
   late final TextEditingController _identifierController;
+  var _navigatedForReady = false;
 
   @override
   void initState() {
@@ -30,20 +36,39 @@ class _IdentifyMachinePageState extends State<IdentifyMachinePage> {
     super.dispose();
   }
 
+  void _goToLinesIfReady(VisitStartController controller) {
+    if (controller.state is! VisitStartReady || _navigatedForReady) {
+      return;
+    }
+    _navigatedForReady = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) {
+        return;
+      }
+      Navigator.of(context).pushReplacementNamed(
+        AppRouter.replenishmentLineEntryPath,
+      );
+      controller.resetToIdle();
+      _navigatedForReady = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final controller =
         widget.controller ??
-        AppDependenciesScope.of(context).machineIdentificationController;
+        AppDependenciesScope.of(context).visitStartController;
     final theme = Theme.of(context);
 
     return ListenableBuilder(
       listenable: controller,
       builder: (context, _) {
         final state = controller.state;
+        _goToLinesIfReady(controller);
+
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Máquina'),
+            title: const Text('Identificar máquina'),
             actions: [
               if (widget.onSignOut != null)
                 TextButton(
@@ -56,37 +81,52 @@ class _IdentifyMachinePageState extends State<IdentifyMachinePage> {
             child: Padding(
               padding: const EdgeInsets.all(24),
               child: switch (state) {
-                MachineIdentificationResolved(:final machine) => _ResolvedView(
-                  theme: theme,
-                  name: machine.name,
-                  identifier: machine.identifier,
-                  machineType: machine.machineType,
-                  status: machine.status,
-                  onContinue: () {
-                    Navigator.of(context).pushNamed(
-                      '/machines/detail',
-                      arguments: machine.machineId,
-                    );
-                  },
-                  onIdentifyAnother: () {
-                    _identifierController.clear();
-                    controller.resetToInitial();
-                  },
-                ),
-                MachineIdentificationSessionExpired() => Center(
+                VisitStartSessionExpired() => Center(
                   child: Text(
                     'La sesión ha expirado. Vuelve a iniciar sesión.',
                     style: theme.textTheme.bodyLarge,
                     textAlign: TextAlign.center,
                   ),
                 ),
+                VisitStartNoOperator() => Center(
+                  child: Text(
+                    'No hay un operador cargado. Vuelve a iniciar sesión.',
+                    style: theme.textTheme.bodyLarge,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                VisitStartStarting(:final phase) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text(phase, textAlign: TextAlign.center),
+                    ],
+                  ),
+                ),
+                VisitStartReady(:final machine) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Abriendo reposición en ${machine.name}...',
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
                 _ => _IdentifyForm(
                   theme: theme,
                   identifierController: _identifierController,
                   state: state,
-                  isResolving: controller.isResolving,
-                  onIdentify: () =>
-                      controller.identify(_identifierController.text),
+                  isStarting: controller.isStarting,
+                  onIdentify: () {
+                    _navigatedForReady = false;
+                    controller.startFromIdentifier(_identifierController.text);
+                  },
                   onRetry: controller.retry,
                 ),
               },
@@ -103,53 +143,46 @@ class _IdentifyForm extends StatelessWidget {
     required this.theme,
     required this.identifierController,
     required this.state,
-    required this.isResolving,
+    required this.isStarting,
     required this.onIdentify,
     required this.onRetry,
   });
 
   final ThemeData theme;
   final TextEditingController identifierController;
-  final MachineIdentificationState state;
-  final bool isResolving;
+  final VisitStartState state;
+  final bool isStarting;
   final VoidCallback onIdentify;
   final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
-    final failure = state is MachineIdentificationFailure
-        ? state as MachineIdentificationFailure
+    final failure = state is VisitStartFailure
+        ? state as VisitStartFailure
         : null;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Identificador de máquina', style: theme.textTheme.titleMedium),
-        const SizedBox(height: 8),
+        Text(
+          'Escanea o ingresa el código de la máquina para iniciar la reposición.',
+          style: theme.textTheme.bodyLarge,
+        ),
+        const SizedBox(height: 24),
         TextField(
           controller: identifierController,
-          enabled: !isResolving,
+          enabled: !isStarting,
           decoration: const InputDecoration(
-            hintText: 'Código QR o ID interno',
+            labelText: 'Código / QR',
             border: OutlineInputBorder(),
           ),
           textInputAction: TextInputAction.done,
           onSubmitted: (_) => onIdentify(),
         ),
         const SizedBox(height: 16),
-        if (isResolving) ...[
-          const Center(child: CircularProgressIndicator()),
-          const SizedBox(height: 12),
-          Text(
-            'Resolviendo máquina...',
-            style: theme.textTheme.bodyMedium,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-        ],
         FilledButton(
-          onPressed: isResolving ? null : onIdentify,
-          child: const Text('Identificar máquina'),
+          onPressed: isStarting ? null : onIdentify,
+          child: Text(isStarting ? 'Iniciando...' : 'Identificar e iniciar'),
         ),
         if (failure != null) ...[
           const SizedBox(height: 16),
@@ -158,78 +191,12 @@ class _IdentifyForm extends StatelessWidget {
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.error,
             ),
-            textAlign: TextAlign.center,
           ),
           if (failure.canRetry) ...[
-            const SizedBox(height: 12),
-            OutlinedButton(
-              onPressed: isResolving ? null : onRetry,
-              child: const Text('Reintentar'),
-            ),
+            const SizedBox(height: 8),
+            TextButton(onPressed: onRetry, child: const Text('Reintentar')),
           ],
         ],
-      ],
-    );
-  }
-}
-
-class _ResolvedView extends StatelessWidget {
-  const _ResolvedView({
-    required this.theme,
-    required this.name,
-    required this.identifier,
-    required this.machineType,
-    required this.status,
-    required this.onContinue,
-    required this.onIdentifyAnother,
-  });
-
-  final ThemeData theme;
-  final String name;
-  final String identifier;
-  final String machineType;
-  final String status;
-  final VoidCallback onContinue;
-  final VoidCallback onIdentifyAnother;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(
-          'Máquina identificada',
-          style: theme.textTheme.headlineSmall,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 16),
-        Text(
-          name,
-          style: theme.textTheme.titleLarge,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          identifier,
-          style: theme.textTheme.bodyLarge,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          '$machineType · $status',
-          style: theme.textTheme.bodySmall,
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 24),
-        FilledButton(
-          onPressed: onContinue,
-          child: const Text('Ver detalle y slots'),
-        ),
-        const SizedBox(height: 12),
-        OutlinedButton(
-          onPressed: onIdentifyAnother,
-          child: const Text('Identificar otra máquina'),
-        ),
       ],
     );
   }

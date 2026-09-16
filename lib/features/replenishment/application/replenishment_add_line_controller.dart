@@ -231,6 +231,17 @@ final class ReplenishmentAddLineController extends ChangeNotifier {
     _setState(const ReplenishmentAddLineIdle());
   }
 
+  /// Clears product/slot/qty after a successful line so the operator can scan again.
+  void prepareForNextLine() {
+    _addGeneration += 1;
+    _product = null;
+    _barcode = null;
+    _selectedSlotId = null;
+    _quantity = null;
+    _idempotencyKey = null;
+    _setState(const ReplenishmentAddLineIdle());
+  }
+
   Future<void> clear() async {
     _addGeneration += 1;
     _product = null;

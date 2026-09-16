@@ -49,7 +49,7 @@ class OperatorHomePage extends StatelessWidget {
                         Navigator.of(context)
                             .pushNamed(AppRouter.identifyMachinePath);
                       },
-                  child: const Text('Identificar máquina'),
+                  child: const Text('Identificar e iniciar reposición'),
                 ),
                 const SizedBox(height: 12),
                 TextButton(
